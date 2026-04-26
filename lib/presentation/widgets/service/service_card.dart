@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------
 // service_card.dart
 //
@@ -126,32 +125,44 @@ class ServiceCard extends ConsumerWidget {
 
                   // Rating, bookings, and price row
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (service.reviewCount > 0) ...[
-                        RatingDisplay(
-                          rating: service.avgRating,
-                          reviewCount: service.reviewCount,
-                          size: 12,
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (service.reviewCount > 0)
+                              RatingDisplay(
+                                rating: service.avgRating,
+                                reviewCount: service.reviewCount,
+                                size: 12,
+                              )
+                            else
+                              Text('New',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.info,
+                                  )),
+                            if (service.bookingCount > 0)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.event_available,
+                                      size: 12, color: AppColors.grey400),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '${service.bookingCount} booked',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.grey500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
                         ),
-                      ] else ...[
-                        Text('New',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.info,
-                            )),
-                      ],
-                      if (service.bookingCount > 0) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.event_available,
-                            size: 12, color: AppColors.grey400),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${service.bookingCount} booked',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.grey500,
-                          ),
-                        ),
-                      ],
-                      const Spacer(),
+                      ),
+                      const SizedBox(width: 8),
                       // Price
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,

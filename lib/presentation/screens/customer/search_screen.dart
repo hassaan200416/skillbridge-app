@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------
 // search_screen.dart
 //
@@ -28,12 +27,18 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
+  bool _isAiSearching = false;
   bool _showAiBanner = false;
   int _displayLimit = 8;
 
   @override
   void initState() {
     super.initState();
+    // If we have an initial query, set loading immediately
+    // to prevent the build from showing default/all results
+    if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
+      _isAiSearching = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialQuery != null &&
           widget.initialQuery!.trim().isNotEmpty) {
@@ -63,6 +68,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (query.trim().isEmpty) return;
     if (mounted) {
       setState(() {
+        _isAiSearching = true;
         _showAiBanner = false;
       });
     }
@@ -70,11 +76,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final extraction =
           await AiService.instance.extractSearchParameters(query);
       if (mounted) {
+        // If AI detected a category, use category filter only
+        // (don't combine with text query — ILIKE phrase matching
+        // is too strict and returns no results)
+        // Only use text query if no category was detected
+        final detectedCategory = extraction.category != null
+            ? ServiceCategoryExtension.fromString(extraction.category!)
+            : null;
+
         ref.read(searchParamsProvider.notifier).state = SearchParams(
-          query: extraction.cleanQuery,
-          category: extraction.category != null
-              ? ServiceCategoryExtension.fromString(extraction.category!)
-              : null,
+          query: detectedCategory != null ? '' : extraction.cleanQuery,
+          category: detectedCategory,
           maxPrice: extraction.maxPrice,
         );
         setState(() {
@@ -86,6 +98,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (mounted) {
         ref.read(searchParamsProvider.notifier).state =
             SearchParams(query: query);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isAiSearching = false);
       }
     }
   }
@@ -117,18 +133,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           _CategoryChips(
             selectedCategory: params.category,
             onSelect: (cat) {
-              ref.read(searchParamsProvider.notifier).state =
-                  params.copyWith(category: cat);
-              setState(() => _displayLimit = 8);
+              // Clear text query when selecting a category chip
+              ref.read(searchParamsProvider.notifier).state = SearchParams(
+                query: '',
+                category: cat,
+                sortBy: params.sortBy,
+              );
+              setState(() {
+                _displayLimit = 8;
+                _showAiBanner = false;
+              });
             },
           ),
           const SizedBox(height: 28),
-          // Results
-          _ResultsSection(
-            params: params,
-            displayLimit: _displayLimit,
-            onLoadMore: () => setState(() => _displayLimit += 8),
-          ),
+          // Results (show loading while AI search is processing)
+          if (_isAiSearching)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 80),
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(color: AppColors.primary),
+                    SizedBox(height: 16),
+                    Text('AI is analyzing your search...'),
+                  ],
+                ),
+              ),
+            )
+          else
+            _ResultsSection(
+              params: params,
+              displayLimit: _displayLimit,
+              onLoadMore: () => setState(() => _displayLimit += 8),
+            ),
         ],
       ),
     );
@@ -192,6 +229,8 @@ class _AiBanner extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D2D2D),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
+              maximumSize: const Size(220, 44),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
@@ -439,26 +478,48 @@ class _ResultsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Heading + count
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 760;
+
+                final heading = Text(
                   'Discover Master Craftsmen',
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: AppColors.secondary,
                   ),
-                ),
-                Text(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                );
+
+                final count = Text(
                   '${allServices.length} services found in your area',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppColors.grey500,
                   ),
-                ),
-              ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: isCompact ? TextAlign.left : TextAlign.right,
+                );
+
+                if (isCompact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [heading, const SizedBox(height: 4), count],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: heading),
+                    const SizedBox(width: 16),
+                    Flexible(child: count),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -703,4 +764,3 @@ class _ServiceGridCard extends StatelessWidget {
     );
   }
 }
-
