@@ -1,0 +1,1155 @@
+
+// ---------------------------------------------------------------------------
+// register_screen.dart
+// Two-step premium registration for SkillBridge.
+// ---------------------------------------------------------------------------
+
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/route_names.dart';
+import '../../../core/utils/validators.dart';
+import '../../../data/models/user_model.dart';
+import '../../../presentation/providers/auth_provider.dart';
+
+class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  UserRole _selectedRole = UserRole.customer;
+  int _step = 1; // 1 = role selection, 2 = form
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+    final success = await ref.read(authNotifierProvider.notifier).register(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+          role: _selectedRole,
+        );
+    if (!mounted) return;
+    if (success) context.go(RouteNames.verifyEmail);
+  }
+
+  String _friendlyAuthError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('invalid_credentials') ||
+        lower.contains('invalid login credentials')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (lower.contains('email not confirmed')) {
+      return 'Please verify your email address before signing in.';
+    }
+    if (lower.contains('too many requests') || lower.contains('rate limit')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    if (lower.contains('user not found')) {
+      return 'No account found with this email. Please sign up first.';
+    }
+    if (lower.contains('network') ||
+        lower.contains('socket') ||
+        lower.contains('connection')) {
+      return 'Network error. Please check your internet connection.';
+    }
+    // Fallback: strip raw exception wrappers and keep only useful message.
+    final cleaned = raw
+        .replaceAll(RegExp(r'AuthApiException\(message:\s*'), '')
+        .replaceAll(RegExp(r',\s*statusCode:.*$'), '')
+        .replaceAll(')', '')
+        .trim();
+    return cleaned.isNotEmpty
+        ? cleaned
+        : 'Something went wrong. Please try again.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+
+    ref.listen(authNotifierProvider, (prev, next) {
+      if (next.error != null && prev?.error != next.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_friendlyAuthError(next.error!.message)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Future.microtask(() {
+          if (mounted) {
+            ref.read(authNotifierProvider.notifier).clearError();
+          }
+        });
+      }
+    });
+
+    final formContent = _step == 1
+        ? _RoleStep(
+            selectedRole: _selectedRole,
+            onRoleSelected: (role) => setState(() => _selectedRole = role),
+            onNext: () => setState(() => _step = 2),
+            onLogin: () => context.go(RouteNames.login),
+          )
+        : _DetailsStep(
+            formKey: _formKey,
+            nameController: _nameController,
+            emailController: _emailController,
+            passwordController: _passwordController,
+            confirmController: _confirmController,
+            obscurePassword: _obscurePassword,
+            obscureConfirm: _obscureConfirm,
+            onTogglePassword: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+            onToggleConfirm: () =>
+                setState(() => _obscureConfirm = !_obscureConfirm),
+            selectedRole: _selectedRole,
+            isLoading: authState.isLoading,
+            onBack: () => setState(() => _step = 1),
+            onRegister: authState.isLoading ? null : _register,
+            onLogin: () => context.go(RouteNames.login),
+          );
+
+    return Scaffold(
+      backgroundColor: AppColors.secondary,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final viewportH = MediaQuery.sizeOf(context).height;
+          final isWide = constraints.maxWidth > 900;
+
+          return SizedBox(
+            height: viewportH,
+            child: isWide
+                ? _RegisterWideLayout(
+                    selectedRole: _selectedRole,
+                    step: _step,
+                    formContent: formContent,
+                  )
+                : _RegisterNarrowLayout(formContent: formContent),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RegisterWideLayout extends StatelessWidget {
+  const _RegisterWideLayout({
+    required this.selectedRole,
+    required this.step,
+    required this.formContent,
+  });
+
+  final UserRole selectedRole;
+  final int step;
+  final Widget formContent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Left panel — gradient only (no photo)
+        Expanded(
+          flex: 6,
+          child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              // Dark gradient — no image for register
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF0A1628),
+                      Color(0xFF0D1B2A),
+                      Color(0xFF0A1F14),
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+              // Subtle circle decorations
+              Positioned(
+                right: -100,
+                top: -100,
+                child: Container(
+                  width: 350,
+                  height: 350,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: -80,
+                bottom: 80,
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.all(48),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.topLeft,
+                          child: SizedBox(
+                            width: c.maxWidth * 0.92,
+                            height: c.maxHeight,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Logo
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.handshake_outlined,
+                                        color: AppColors.white,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      AppStrings.appName,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                RichText(
+                                  text: TextSpan(
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.white,
+                                      height: 1.15,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: selectedRole == UserRole.provider
+                                            ? 'Grow your\nbusiness\nwith '
+                                            : 'Book trusted\n',
+                                      ),
+                                      TextSpan(
+                                        text: selectedRole == UserRole.provider
+                                            ? '${AppStrings.appName}.'
+                                            : 'services',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 48,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.primary,
+                                          height: 1.15,
+                                        ),
+                                      ),
+                                      if (selectedRole != UserRole.provider)
+                                        const TextSpan(text: '\nin your city.'),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  selectedRole == UserRole.provider
+                                      ? 'List your services and reach hundreds\nof customers in your area.'
+                                      : 'Find verified professionals for any\nhome service. Book in minutes.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    color: AppColors.white.withValues(alpha: 0.65),
+                                    height: 1.65,
+                                  ),
+                                ),
+                                const Spacer(),
+                                // Step progress at bottom
+                                Row(
+                                  children: [
+                                    _StepDot(
+                                      active: step == 1,
+                                      done: step > 1,
+                                      label: 'Choose role',
+                                    ),
+                                    Container(
+                                      width: 48,
+                                      height: 2,
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        color: step > 1
+                                            ? AppColors.primary
+                                            : AppColors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(1),
+                                      ),
+                                    ),
+                                    _StepDot(
+                                      active: step == 2,
+                                      done: false,
+                                      label: 'Your details',
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 4,
+          child: Container(
+            color: AppColors.white,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final contentW = math.max(220.0, math.min(480.0, c.maxWidth));
+                  return Align(
+                    alignment: Alignment.center,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: contentW,
+                        child: formContent,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegisterNarrowLayout extends StatelessWidget {
+  const _RegisterNarrowLayout({required this.formContent});
+  final Widget formContent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.secondary,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, c) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: math.max(220.0, math.min(460.0, c.maxWidth - 48)),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 40,
+                            offset: const Offset(0, 20),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(36),
+                      child: formContent,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// Step 1: Role selection
+class _RoleStep extends StatelessWidget {
+  const _RoleStep({
+    required this.selectedRole,
+    required this.onRoleSelected,
+    required this.onNext,
+    required this.onLogin,
+  });
+
+  final UserRole selectedRole;
+  final void Function(UserRole) onRoleSelected;
+  final VoidCallback onNext;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Join SkillBridge',
+          style: GoogleFonts.poppins(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'How do you want to use SkillBridge?',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: AppColors.grey500,
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // Customer card
+        _RoleCard(
+          title: 'Find Services',
+          subtitle: 'Browse and book trusted local service providers near you',
+          icon: Icons.search_rounded,
+          emoji: '🔍',
+          isSelected: selectedRole == UserRole.customer,
+          onTap: () => onRoleSelected(UserRole.customer),
+        ),
+        const SizedBox(height: 14),
+
+        // Provider card
+        _RoleCard(
+          title: 'Offer Services',
+          subtitle:
+              'List your skills and grow your business with new customers',
+          icon: Icons.handyman_rounded,
+          emoji: '🔧',
+          isSelected: selectedRole == UserRole.provider,
+          onTap: () => onRoleSelected(UserRole.provider),
+        ),
+
+        const SizedBox(height: 32),
+
+        _PremiumButton(
+          label: 'Continue',
+          isLoading: false,
+          onPressed: onNext,
+        ),
+
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Already have an account? ',
+                style:
+                    GoogleFonts.inter(color: AppColors.grey500, fontSize: 14)),
+            _HoverPrimaryLink(label: 'Sign in', onTap: onLogin),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// Step 2: Details form
+class _DetailsStep extends StatelessWidget {
+  const _DetailsStep({
+    required this.formKey,
+    required this.nameController,
+    required this.emailController,
+    required this.passwordController,
+    required this.confirmController,
+    required this.obscurePassword,
+    required this.obscureConfirm,
+    required this.onTogglePassword,
+    required this.onToggleConfirm,
+    required this.selectedRole,
+    required this.isLoading,
+    required this.onBack,
+    required this.onRegister,
+    required this.onLogin,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController confirmController;
+  final bool obscurePassword;
+  final bool obscureConfirm;
+  final VoidCallback onTogglePassword;
+  final VoidCallback onToggleConfirm;
+  final UserRole selectedRole;
+  final bool isLoading;
+  final VoidCallback onBack;
+  final VoidCallback? onRegister;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Back button
+          _HoverBackButton(onTap: onBack),
+          const SizedBox(height: 20),
+
+          // Role badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: selectedRole == UserRole.provider
+                  ? AppColors.accent.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              selectedRole == UserRole.provider
+                  ? '🔧 Signing up as Service Provider'
+                  : '🔍 Signing up as Customer',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selectedRole == UserRole.provider
+                    ? AppColors.accent
+                    : AppColors.primary,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            'Your details',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.secondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text('Fill in your information to get started',
+              style: GoogleFonts.inter(fontSize: 14, color: AppColors.grey500)),
+          const SizedBox(height: 24),
+
+          _PremiumTextField(
+            controller: nameController,
+            label: 'Full name',
+            hint: 'Your full name',
+            icon: Icons.person_outline,
+            validator: Validators.name,
+          ),
+          const SizedBox(height: 14),
+
+          _PremiumTextField(
+            controller: emailController,
+            label: 'Email address',
+            hint: 'you@example.com',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: Validators.email,
+          ),
+          const SizedBox(height: 14),
+
+          _PremiumTextField(
+            controller: passwordController,
+            label: 'Password',
+            hint: '••••••••',
+            icon: Icons.lock_outline,
+            obscureText: obscurePassword,
+            suffixIcon: obscurePassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            onSuffixTap: onTogglePassword,
+            validator: Validators.password,
+          ),
+          const SizedBox(height: 14),
+
+          _PremiumTextField(
+            controller: confirmController,
+            label: 'Confirm password',
+            hint: '••••••••',
+            icon: Icons.lock_outline,
+            obscureText: obscureConfirm,
+            suffixIcon: obscureConfirm
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            onSuffixTap: onToggleConfirm,
+            validator: (val) =>
+                Validators.confirmPassword(val, passwordController.text),
+          ),
+
+          const SizedBox(height: 28),
+
+          _PremiumButton(
+            label: 'Create account',
+            isLoading: isLoading,
+            onPressed: onRegister,
+          ),
+
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'By creating an account you agree to our Terms of Service',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: AppColors.grey400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Already have an account? ',
+                style: GoogleFonts.inter(
+                  color: AppColors.grey500,
+                  fontSize: 14,
+                ),
+              ),
+              _HoverPrimaryLink(label: 'Sign in', onTap: onLogin),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Role selection card
+class _RoleCard extends StatefulWidget {
+  const _RoleCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.emoji,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String emoji;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  State<_RoleCard> createState() => _RoleCardState();
+}
+
+class _RoleCardState extends State<_RoleCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? AppColors.primary.withValues(alpha: 0.05)
+                : AppColors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: widget.isSelected
+                  ? AppColors.primary
+                  : const Color(0xFFE2E8F0),
+              width: widget.isSelected ? 2 : 1,
+            ),
+            boxShadow: _isHovered && !widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : widget.isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    : [],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: widget.isSelected
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : AppColors.grey100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child:
+                      Text(widget.emoji, style: const TextStyle(fontSize: 22)),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isSelected
+                            ? AppColors.primary
+                            : AppColors.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppColors.grey500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.isSelected)
+                const Icon(Icons.check_circle,
+                    color: AppColors.primary, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Step indicator dot
+class _StepDot extends StatelessWidget {
+  const _StepDot({
+    required this.active,
+    required this.done,
+    required this.label,
+  });
+
+  final bool active;
+  final bool done;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: active || done
+                ? AppColors.primary
+                : AppColors.white.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: done
+                ? const Icon(Icons.check, size: 14, color: AppColors.white)
+                : Icon(
+                    active
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    size: 14,
+                    color: active
+                        ? AppColors.white
+                        : AppColors.white.withValues(alpha: 0.5),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: active ? AppColors.white : AppColors.white.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Reuse premium components from login
+class _PremiumTextField extends StatefulWidget {
+  const _PremiumTextField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.keyboardType,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.onSuffixTap,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final IconData? suffixIcon;
+  final VoidCallback? onSuffixTap;
+  final String? Function(String?)? validator;
+
+  @override
+  State<_PremiumTextField> createState() => _PremiumTextFieldState();
+}
+
+class _PremiumTextFieldState extends State<_PremiumTextField> {
+  final _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode
+        .addListener(() => setState(() => _isFocused = _focusNode.hasFocus));
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    )
+                  ]
+                : [],
+          ),
+          child: TextFormField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            obscureText: widget.obscureText,
+            keyboardType: widget.keyboardType,
+            validator: widget.validator,
+            style: GoogleFonts.inter(fontSize: 14, color: AppColors.secondary),
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle:
+                  GoogleFonts.inter(color: AppColors.grey400, fontSize: 14),
+              prefixIcon: Icon(widget.icon,
+                  size: 18,
+                  color: _isFocused ? AppColors.primary : AppColors.grey400),
+              suffixIcon: widget.suffixIcon != null
+                  ? GestureDetector(
+                      onTap: widget.onSuffixTap,
+                      child: Icon(widget.suffixIcon,
+                          size: 18, color: AppColors.grey400))
+                  : null,
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.error, width: 1),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppColors.error, width: 1.5),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoverPrimaryLink extends StatefulWidget {
+  const _HoverPrimaryLink({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_HoverPrimaryLink> createState() => _HoverPrimaryLinkState();
+}
+
+class _HoverBackButton extends StatefulWidget {
+  const _HoverBackButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_HoverBackButton> createState() => _HoverBackButtonState();
+}
+
+class _HoverBackButtonState extends State<_HoverBackButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFECEFF3) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.arrow_back_ios,
+                size: 14,
+                color: Colors.black,
+              ),
+              Text(
+                'Back',
+                style: GoogleFonts.inter(
+                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverPrimaryLinkState extends State<_HoverPrimaryLink> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: GoogleFonts.inter(
+            color: AppColors.primary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            decoration: _hover ? TextDecoration.underline : TextDecoration.none,
+            decorationColor: AppColors.primary,
+          ),
+          child: Text(widget.label),
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumButton extends StatefulWidget {
+  const _PremiumButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  @override
+  State<_PremiumButton> createState() => _PremiumButtonState();
+}
+
+class _PremiumButtonState extends State<_PremiumButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null && !widget.isLoading;
+    return MouseRegion(
+      onEnter: (_) {
+        if (enabled) setState(() => _hover = true);
+      },
+      onExit: (_) => setState(() => _hover = false),
+      cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            gradient: widget.onPressed == null
+                ? null
+                : const LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      Color(0xFF1F7A52),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            color: widget.onPressed == null ? AppColors.grey300 : null,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: widget.onPressed == null
+                ? []
+                : [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: _hover ? 0.45 : 0.3),
+                      blurRadius: _hover ? 16 : 12,
+                      offset: Offset(0, _hover ? 6 : 4),
+                    ),
+                  ],
+          ),
+          child: ElevatedButton(
+            onPressed: widget.isLoading ? null : widget.onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.white,
+                    ),
+                  )
+                : Text(
+                    widget.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
