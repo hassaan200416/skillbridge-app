@@ -59,6 +59,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If query parameter changed (user searched again from header),
+    // trigger a new AI search
+    if (widget.initialQuery != oldWidget.initialQuery &&
+        widget.initialQuery != null &&
+        widget.initialQuery!.trim().isNotEmpty) {
+      _searchController.text = widget.initialQuery!;
+      _performAiSearch(widget.initialQuery!);
+    }
+    // If category parameter changed
+    if (widget.initialCategory != oldWidget.initialCategory &&
+        widget.initialCategory != null) {
+      final category =
+          ServiceCategoryExtension.fromString(widget.initialCategory!);
+      ref.read(searchParamsProvider.notifier).state =
+          SearchParams(category: category);
+      setState(() {
+        _showAiBanner = false;
+        _displayLimit = 8;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -80,9 +105,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         // (don't combine with text query — ILIKE phrase matching
         // is too strict and returns no results)
         // Only use text query if no category was detected
-        final detectedCategory = extraction.category != null
+        ServiceCategory? detectedCategory = extraction.category != null
             ? ServiceCategoryExtension.fromString(extraction.category!)
             : null;
+
+        // Fallback: if AI didn't detect a category, try matching
+        // the original query against category names locally
+        detectedCategory ??= _tryMatchCategory(query);
 
         ref.read(searchParamsProvider.notifier).state = SearchParams(
           query: detectedCategory != null ? '' : extraction.cleanQuery,
@@ -104,6 +133,52 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         setState(() => _isAiSearching = false);
       }
     }
+  }
+
+  /// Local fallback: try to match query text against category names
+  ServiceCategory? _tryMatchCategory(String query) {
+    final q = query.toLowerCase();
+    const categoryKeywords = {
+      'plumber': ServiceCategory.plumber,
+      'plumbing': ServiceCategory.plumber,
+      'pipe': ServiceCategory.plumber,
+      'cleaning': ServiceCategory.cleaning,
+      'clean': ServiceCategory.cleaning,
+      'maid': ServiceCategory.cleaning,
+      'electrician': ServiceCategory.electrician,
+      'electrical': ServiceCategory.electrician,
+      'wiring': ServiceCategory.electrician,
+      'ac repair': ServiceCategory.electrician,
+      'tutor': ServiceCategory.tutoring,
+      'tutoring': ServiceCategory.tutoring,
+      'tuition': ServiceCategory.tutoring,
+      'teaching': ServiceCategory.tutoring,
+      'math': ServiceCategory.tutoring,
+      'beauty': ServiceCategory.beauty,
+      'makeup': ServiceCategory.beauty,
+      'bridal': ServiceCategory.beauty,
+      'salon': ServiceCategory.beauty,
+      'mechanic': ServiceCategory.mechanic,
+      'car': ServiceCategory.mechanic,
+      'vehicle': ServiceCategory.mechanic,
+      'oil change': ServiceCategory.mechanic,
+      'home repair': ServiceCategory.homeRepair,
+      'renovation': ServiceCategory.homeRepair,
+      'repair': ServiceCategory.homeRepair,
+      'design': ServiceCategory.graphicDesign,
+      'logo': ServiceCategory.graphicDesign,
+      'graphic': ServiceCategory.graphicDesign,
+      'moving': ServiceCategory.moving,
+      'shifting': ServiceCategory.moving,
+      'movers': ServiceCategory.moving,
+    };
+
+    for (final entry in categoryKeywords.entries) {
+      if (q.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+    return null;
   }
 
   @override

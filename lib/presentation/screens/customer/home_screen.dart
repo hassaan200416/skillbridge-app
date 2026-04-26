@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------
 // home_screen.dart
 //
@@ -50,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'Browse by Category',
                 subtitle: 'Find services for every need',
                 actionLabel: 'View all categories →',
-                onAction: () => context.push(RouteNames.search),
+                onAction: () => context.go(RouteNames.search),
               ),
               const SizedBox(height: 16),
               const _CategoryGrid(),
@@ -59,7 +58,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'Featured Services',
                 subtitle: 'Hand-picked providers with exceptional ratings',
                 actionLabel: 'See all →',
-                onAction: () => context.push(RouteNames.search),
+                onAction: () => context.go(RouteNames.search),
               ),
               const SizedBox(height: 16),
               featured.when(
@@ -77,7 +76,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'Recently Added',
                 subtitle: 'New providers joining SkillBridge',
                 actionLabel: 'See all →',
-                onAction: () => context.push(RouteNames.search),
+                onAction: () => context.go(RouteNames.search),
               ),
               const SizedBox(height: 16),
               recent.when(
@@ -167,7 +166,8 @@ class _HeroBannerState extends State<_HeroBanner> {
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.18)),
                   ),
                   child: Row(
                     children: [
@@ -205,10 +205,10 @@ class _HeroBannerState extends State<_HeroBanner> {
                               ),
                             ),
                             onSubmitted: (val) {
-                              if (val.isNotEmpty) {
-                                context.push(
-                                  RouteNames.search,
-                                  extra: {'query': val},
+                              final q = val.trim();
+                              if (q.isNotEmpty) {
+                                context.go(
+                                  '/search?q=${Uri.encodeComponent(q)}',
                                 );
                               }
                             },
@@ -221,12 +221,12 @@ class _HeroBannerState extends State<_HeroBanner> {
                         height: 30,
                         child: ElevatedButton(
                           onPressed: () {
-                            context.push(
-                              RouteNames.search,
-                              extra: _controller.text.isNotEmpty
-                                  ? {'query': _controller.text}
-                                  : null,
-                            );
+                            final q = _controller.text.trim();
+                            if (q.isNotEmpty) {
+                              context.go('/search?q=${Uri.encodeComponent(q)}');
+                            } else {
+                              context.go('/search');
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0F3C33),
@@ -385,9 +385,8 @@ class _CategoryCardState extends State<_CategoryCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () => context.push(
-          RouteNames.search,
-          extra: {'category': widget.value},
+        onTap: () => context.go(
+          '/search?category=${widget.value}',
         ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -529,4 +528,3 @@ class _RecentShimmer extends StatelessWidget {
     );
   }
 }
-

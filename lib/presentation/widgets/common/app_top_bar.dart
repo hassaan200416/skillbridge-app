@@ -101,6 +101,8 @@ class _CustomerHeaderSearch extends StatefulWidget {
 class _CustomerHeaderSearchState extends State<_CustomerHeaderSearch> {
   final _controller = TextEditingController();
 
+  String? _lastSyncedQ;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -109,7 +111,7 @@ class _CustomerHeaderSearchState extends State<_CustomerHeaderSearch> {
 
   void _submit(String query) {
     final trimmed = query.trim();
-    _controller.clear();
+    // Don't clear — keep the query visible in the search bar
     FocusScope.of(context).unfocus();
     // Delay navigation to next microtask to avoid GlobalKey
     // conflict during widget tree rebuild
@@ -125,6 +127,18 @@ class _CustomerHeaderSearchState extends State<_CustomerHeaderSearch> {
 
   @override
   Widget build(BuildContext context) {
+    final state = GoRouterState.of(context);
+    final isSearchRoute = state.matchedLocation == RouteNames.search;
+    final q = isSearchRoute ? state.uri.queryParameters['q']?.trim() ?? '' : '';
+
+    if (isSearchRoute && q != _lastSyncedQ) {
+      _lastSyncedQ = q;
+      _controller.value = TextEditingValue(
+        text: q,
+        selection: TextSelection.collapsed(offset: q.length),
+      );
+    }
+
     return SizedBox(
       height: 38,
       child: TextField(
