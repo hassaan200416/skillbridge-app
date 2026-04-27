@@ -249,5 +249,3 @@ The project is configured for Vercel auto-deployment:
 - **Static routes before dynamic** — In go_router, static routes like `/book/confirm` must precede dynamic routes like `/book/:id` to prevent UUID conflicts.
 
 ---
-
----
