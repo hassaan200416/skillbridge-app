@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -122,11 +121,11 @@ class _SkillBotFab extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: isOpen
                 ? const Icon(Icons.close,
-                    color: AppColors.grey700, key: ValueKey('close'))
+                    color: AppColors.grey700, size: 28, key: ValueKey('close'))
                 : const Icon(
                     Icons.smart_toy_outlined,
                     color: Colors.white,
-                    size: 26,
+                    size: 30,
                     key: ValueKey('bot'),
                   ),
           ),
@@ -371,7 +370,8 @@ class _SuggestedPrompts extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25)),
               ),
               child: Text(
                 _prompts[index],
@@ -608,4 +608,3 @@ class _InputBar extends StatelessWidget {
     );
   }
 }
-

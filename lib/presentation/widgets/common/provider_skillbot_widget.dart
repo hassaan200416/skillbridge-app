@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -115,9 +114,9 @@ class _ProviderSkillBotFab extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: isOpen
                 ? const Icon(Icons.close,
-                    color: AppColors.grey600, key: ValueKey('close'))
+                    color: AppColors.grey600, size: 28, key: ValueKey('close'))
                 : const Icon(Icons.support_agent_rounded,
-                    color: Colors.white, size: 26, key: ValueKey('bot')),
+                    color: Colors.white, size: 30, key: ValueKey('bot')),
           ),
         ),
       ),
@@ -569,4 +568,3 @@ class _InputBar extends StatelessWidget {
     );
   }
 }
-
