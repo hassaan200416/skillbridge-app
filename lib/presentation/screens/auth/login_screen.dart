@@ -1,4 +1,3 @@
-
 import 'dart:math' as math;
 
 /// ---------------------------------------------------------------------------
@@ -325,7 +324,8 @@ class _WideLayout extends StatelessWidget {
                                   'Connect with the top 1% of verified service\nproviders in your city. Seamless booking,\nguaranteed quality.',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: AppColors.white.withValues(alpha: 0.72),
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.72),
                                     height: 1.65,
                                   ),
                                 ),
@@ -348,8 +348,8 @@ class _WideLayout extends StatelessWidget {
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 14, vertical: 7),
                                             decoration: BoxDecoration(
-                                              color:
-                                                  Colors.white.withValues(alpha: 0.1),
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(6),
                                               border: Border.all(
@@ -392,7 +392,8 @@ class _WideLayout extends StatelessWidget {
                                   'EMPOWERING LOCAL EXCELLENCE SINCE 2024',
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    color: AppColors.white.withValues(alpha: 0.4),
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.4),
                                     letterSpacing: 2,
                                   ),
                                 ),
@@ -449,40 +450,29 @@ class _NarrowLayout extends StatelessWidget {
     return Container(
       color: AppColors.secondary,
       child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, c) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: math.max(
-                      200.0,
-                      math.min(440.0, c.maxWidth - 48),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 40,
-                            offset: const Offset(0, 20),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.fromLTRB(32, 32, 32, 40),
-                      child: formContent,
-                    ),
-                  ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 32,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          ),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+            child: formContent,
+          ),
         ),
       ),
     );
@@ -866,7 +856,8 @@ class _PremiumButtonState extends State<_PremiumButton> {
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: _hover ? 0.45 : 0.3),
+                      color: AppColors.primary
+                          .withValues(alpha: _hover ? 0.45 : 0.3),
                       blurRadius: _hover ? 16 : 12,
                       offset: Offset(0, _hover ? 6 : 4),
                     ),
@@ -1024,4 +1015,3 @@ class _StatCard2 extends StatelessWidget {
     );
   }
 }
-

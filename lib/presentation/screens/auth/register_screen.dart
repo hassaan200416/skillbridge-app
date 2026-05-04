@@ -387,37 +387,29 @@ class _RegisterNarrowLayout extends StatelessWidget {
     return Container(
       color: AppColors.secondary,
       child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, c) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: math.max(220.0, math.min(460.0, c.maxWidth - 48)),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 40,
-                            offset: const Offset(0, 20),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(36),
-                      child: formContent,
-                    ),
-                  ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 32,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          ),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+            child: formContent,
+          ),
         ),
       ),
     );
