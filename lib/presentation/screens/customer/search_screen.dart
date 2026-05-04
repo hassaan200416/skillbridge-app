@@ -184,12 +184,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final params = ref.watch(searchParamsProvider);
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.sizeOf(context).width < 600 ? 16 : 24,
+        vertical: 24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Mobile search bar — only shown when AppTopBar is hidden
+          if (isMobile) ...[
+            _MobileSearchBar(
+              controller: _searchController,
+              onSubmitted: _performAiSearch,
+            ),
+            const SizedBox(height: 16),
+          ],
           // AI banner
           if (_showAiBanner) ...[
             _AiBanner(
@@ -203,7 +215,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             const SizedBox(height: 20),
           ],
-          // Search bar removed — header AppTopBar has the only search bar
           // Category chips
           _CategoryChips(
             selectedCategory: params.category,
@@ -256,65 +267,97 @@ class _AiBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3E0),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFCC80)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF9800),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child:
-                const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI-Powered Curation Active',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF4A2C00),
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9800),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Text(
-                  'Results personalized based on your search: "$query"',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: const Color(0xFF7A4A00),
+                child: const Icon(Icons.auto_awesome,
+                    color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI-Powered Curation Active',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF4A2C00),
+                      ),
+                    ),
+                    Text(
+                      'Results for: "$query"',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF7A4A00),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (!isMobile) ...[
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: onRefine,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D2D2D),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
                   ),
+                  child: Text('Refine Intent',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: onRefine,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2D2D2D),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, 40),
-              maximumSize: const Size(220, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
+          if (isMobile) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onRefine,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2D2D2D),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 36),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
+                ),
+                child: Text('Refine Intent',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
             ),
-            child: Text('Refine Intent',
-                style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
+          ],
         ],
       ),
     );
@@ -605,12 +648,16 @@ class _ResultsSection extends ConsumerWidget {
                   : constraints.maxWidth > 600
                       ? 3
                       : 2;
+              final cardHeight = crossAxisCount == 2 ? 280.0 : 300.0;
+              final cardWidth = (constraints.maxWidth -
+                      (crossAxisCount - 1) * 16) /
+                  crossAxisCount;
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  childAspectRatio: 0.72,
+                  childAspectRatio: cardWidth / cardHeight,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),
@@ -835,6 +882,74 @@ class _ServiceGridCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MobileSearchBar extends StatelessWidget {
+  const _MobileSearchBar({
+    required this.controller,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final void Function(String) onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF4F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          const Icon(Icons.auto_awesome, color: AppColors.grey400, size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.secondary,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search services, providers...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.grey400,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onSubmitted: onSubmitted,
+              textInputAction: TextInputAction.search,
+            ),
+          ),
+          GestureDetector(
+            onTap: () => onSubmitted(controller.text),
+            child: Container(
+              margin: const EdgeInsets.all(5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Search',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

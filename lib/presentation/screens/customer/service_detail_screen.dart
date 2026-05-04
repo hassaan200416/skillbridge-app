@@ -16,6 +16,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/route_names.dart';
+import '../../../core/layout/app_breakpoints.dart';
+import '../../../data/models/review_model.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/chat_repository.dart';
@@ -48,12 +50,14 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     final serviceAsync = ref.watch(serviceDetailProvider(widget.serviceId));
     final currentUser = ref.watch(currentUserProvider);
+    final showSidebar = AppBreakpoints.showSidebar(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Row(
         children: [
-          const AppSidebar(role: UserRole.customer, currentRoute: '/service'),
+          if (showSidebar)
+            const AppSidebar(role: UserRole.customer, currentRoute: '/service'),
           Expanded(
             child: serviceAsync.when(
               loading: () => const Center(child: AppLoading()),
@@ -71,273 +75,33 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
 
                 return Column(
                   children: [
-                    // Top bar
-                    const AppTopBar(),
+                    if (showSidebar) const AppTopBar(),
                     // Content
                     Expanded(
                       child: SkillBotWidget(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: InkWell(
-                                  onTap: () {
-                                    if (Navigator.of(context).canPop()) {
-                                      Navigator.of(context).pop();
-                                    } else {
-                                      context.go(RouteNames.search);
-                                    }
-                                  },
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.arrow_back_ios_new,
-                                          size: 14, color: Color(0xFF64748B)),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Back to services',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Breadcrumb
-                              _Breadcrumb(
-                                category: service.category.displayName,
-                                categoryValue: service.category.value,
-                                title: service.title,
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Main two-column layout
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // LEFT column - 65%
-                                  Expanded(
-                                    flex: 65,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Image gallery
-                                        _ImageGallery(
-                                          imageUrls: service.imageUrls,
-                                          selectedIndex: _selectedImageIndex,
-                                          onSelect: (i) => setState(
-                                              () => _selectedImageIndex = i),
-                                          category: service.category,
-                                        ),
-                                        const SizedBox(height: 24),
-
-                                        // Title + tags
-                                        Text(
-                                          service.title,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 26,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.secondary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Wrap(
-                                          spacing: 8,
-                                          children: [
-                                            _TagChip(
-                                              label:
-                                                  service.category.displayName,
-                                              color: AppColors.primary,
-                                            ),
-                                            if (service.providerIsVerified ==
-                                                true)
-                                              const _TagChip(
-                                                label: 'Verified Provider',
-                                                color: AppColors.info,
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 16),
-
-                                        // Description
-                                        Text(
-                                          service.description,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: AppColors.grey600,
-                                            height: 1.7,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-
-                                        // Provider card
-                                        _ProviderCard(
-                                          service: service,
-                                        ),
-                                        const SizedBox(height: 28),
-
-                                        // Reviews
-                                        reviewsAsync.when(
-                                          loading: () =>
-                                              const SizedBox.shrink(),
-                                          error: (_, __) =>
-                                              const SizedBox.shrink(),
-                                          data: (reviews) => _ReviewsSection(
-                                            reviews: reviews,
-                                            avgRating: service.avgRating,
-                                            reviewCount: service.reviewCount,
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 40),
-
-                                        // Related services
-                                        relatedAsync.when(
-                                          loading: () =>
-                                              const SizedBox.shrink(),
-                                          error: (_, __) =>
-                                              const SizedBox.shrink(),
-                                          data: (services) {
-                                            final filtered = services
-                                                .where((s) =>
-                                                    s.id != widget.serviceId)
-                                                .take(3)
-                                                .toList();
-                                            if (filtered.isEmpty) {
-                                              return const SizedBox.shrink();
-                                            }
-                                            return _RelatedServices(
-                                              services: filtered,
-                                              category:
-                                                  service.category.displayName,
-                                              categoryValue:
-                                                  service.category.value,
-                                            );
-                                          },
-                                        ),
-
-                                        // Footer
-                                        const SizedBox(height: 40),
-                                        const _Footer(),
-                                      ],
-                                    ),
-                                  ),
-
-                                  const SizedBox(width: 24),
-
-                                  // RIGHT column - 35% sticky
-                                  SizedBox(
-                                    width: 320,
-                                    child: Column(
-                                      children: [
-                                        // Booking card
-                                        _BookingCard(
-                                          service: service,
-                                          currentUser: currentUser,
-                                        ),
-                                        const SizedBox(height: 16),
-
-                                        // AI summary
-                                        aiSummaryAsync.when(
-                                          loading: () =>
-                                              const SizedBox.shrink(),
-                                          error: (_, __) =>
-                                              const SizedBox.shrink(),
-                                          data: (summary) => summary != null
-                                              ? _AISummaryCard(summary: summary)
-                                              : const SizedBox.shrink(),
-                                        ),
-
-                                        const SizedBox(height: 16),
-
-                                        // Message + Share
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () async {
-                                                  final user = ref.read(
-                                                      currentUserProvider);
-                                                  if (user == null) return;
-                                                  try {
-                                                    final convo =
-                                                        await ChatRepository
-                                                            .instance
-                                                            .getOrCreateConversation(
-                                                      customerId: user.id,
-                                                      providerId:
-                                                          service.providerId,
-                                                      serviceId: service.id,
-                                                    );
-                                                    if (context.mounted) {
-                                                      context.go(
-                                                          '/chat/${convo.id}');
-                                                    }
-                                                  } catch (e) {
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                              'Could not start conversation: $e'),
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .red.shade700,
-                                                        ),
-                                                      );
-                                                    }
-                                                  }
-                                                },
-                                                icon: const Icon(
-                                                    Icons.message_outlined,
-                                                    size: 16),
-                                                label: const Text('Message'),
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor:
-                                                      AppColors.secondary,
-                                                  side: const BorderSide(
-                                                      color: AppColors.border),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 12),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () {},
-                                                icon: const Icon(
-                                                    Icons.share_outlined,
-                                                    size: 16),
-                                                label: const Text('Share'),
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor:
-                                                      AppColors.secondary,
-                                                  side: const BorderSide(
-                                                      color: AppColors.border),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 12),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          padding: EdgeInsets.symmetric(
+                            horizontal: showSidebar ? 24 : 16,
+                            vertical: 24,
                           ),
+                          child: showSidebar
+                              ? _DesktopLayout(
+                                  service: service,
+                                  currentUser: currentUser,
+                                  reviewsAsync: reviewsAsync,
+                                  aiSummaryAsync: aiSummaryAsync,
+                                  relatedAsync: relatedAsync,
+                                  serviceId: widget.serviceId,
+                                  selectedImageIndex: _selectedImageIndex,
+                                  onImageSelect: (i) => setState(
+                                      () => _selectedImageIndex = i),
+                                )
+                              : _MobileLayout(
+                                  service: service,
+                                  currentUser: currentUser,
+                                  reviewsAsync: reviewsAsync,
+                                  aiSummaryAsync: aiSummaryAsync,
+                                ),
                         ),
                       ),
                     ),
@@ -348,6 +112,415 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// -- Responsive layouts -------------------------------------------------------
+
+class _DesktopLayout extends StatelessWidget {
+  const _DesktopLayout({
+    required this.service,
+    required this.currentUser,
+    required this.reviewsAsync,
+    required this.aiSummaryAsync,
+    required this.relatedAsync,
+    required this.serviceId,
+    required this.selectedImageIndex,
+    required this.onImageSelect,
+  });
+
+  final ServiceModel service;
+  final UserModel? currentUser;
+  final AsyncValue<List<ReviewModel>> reviewsAsync;
+  final AsyncValue<String?> aiSummaryAsync;
+  final AsyncValue<List<ServiceModel>> relatedAsync;
+  final String serviceId;
+  final int selectedImageIndex;
+  final void Function(int) onImageSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _BackButton(),
+        _Breadcrumb(
+          category: service.category.displayName,
+          categoryValue: service.category.value,
+          title: service.title,
+        ),
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 65,
+              child: _LeftContent(
+                service: service,
+                reviewsAsync: reviewsAsync,
+                relatedAsync: relatedAsync,
+                serviceId: serviceId,
+                selectedImageIndex: selectedImageIndex,
+                onImageSelect: onImageSelect,
+              ),
+            ),
+            const SizedBox(width: 24),
+            SizedBox(
+              width: 320,
+              child: _RightContent(
+                service: service,
+                currentUser: currentUser,
+                aiSummaryAsync: aiSummaryAsync,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+        const _Footer(),
+      ],
+    );
+  }
+}
+
+class _MobileLayout extends StatelessWidget {
+  const _MobileLayout({
+    required this.service,
+    required this.currentUser,
+    required this.reviewsAsync,
+    required this.aiSummaryAsync,
+  });
+
+  final ServiceModel service;
+  final UserModel? currentUser;
+  final AsyncValue<List<ReviewModel>> reviewsAsync;
+  final AsyncValue<String?> aiSummaryAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _BackButton(),
+        const SizedBox(height: 12),
+        _MobileImageGallery(
+          imageUrls: service.imageUrls,
+          category: service.category,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          service.title,
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            _TagChip(
+              label: service.category.displayName,
+              color: AppColors.primary,
+            ),
+            if (service.providerIsVerified == true)
+              const _TagChip(
+                label: 'Verified',
+                color: AppColors.info,
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          service.description,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: AppColors.grey600,
+            height: 1.7,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _BookingCard(service: service, currentUser: currentUser),
+        const SizedBox(height: 16),
+        aiSummaryAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (summary) => summary != null
+              ? _AISummaryCard(summary: summary)
+              : const SizedBox.shrink(),
+        ),
+        const SizedBox(height: 16),
+        _MessageShareRow(service: service),
+        const SizedBox(height: 20),
+        _ProviderCard(service: service),
+        const SizedBox(height: 20),
+        reviewsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (reviews) => _ReviewsSection(
+            reviews: reviews,
+            avgRating: service.avgRating,
+            reviewCount: service.reviewCount,
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+class _LeftContent extends StatelessWidget {
+  const _LeftContent({
+    required this.service,
+    required this.reviewsAsync,
+    required this.relatedAsync,
+    required this.serviceId,
+    required this.selectedImageIndex,
+    required this.onImageSelect,
+  });
+
+  final ServiceModel service;
+  final AsyncValue<List<ReviewModel>> reviewsAsync;
+  final AsyncValue<List<ServiceModel>> relatedAsync;
+  final String serviceId;
+  final int selectedImageIndex;
+  final void Function(int) onImageSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ImageGallery(
+          imageUrls: service.imageUrls,
+          selectedIndex: selectedImageIndex,
+          onSelect: onImageSelect,
+          category: service.category,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          service.title,
+          style: GoogleFonts.poppins(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          children: [
+            _TagChip(
+              label: service.category.displayName,
+              color: AppColors.primary,
+            ),
+            if (service.providerIsVerified == true)
+              const _TagChip(
+                label: 'Verified Provider',
+                color: AppColors.info,
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          service.description,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            color: AppColors.grey600,
+            height: 1.7,
+          ),
+        ),
+        const SizedBox(height: 24),
+        _ProviderCard(service: service),
+        const SizedBox(height: 28),
+        reviewsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (reviews) => _ReviewsSection(
+            reviews: reviews,
+            avgRating: service.avgRating,
+            reviewCount: service.reviewCount,
+          ),
+        ),
+        const SizedBox(height: 40),
+        relatedAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (services) {
+            final filtered = services
+                .where((s) => s.id != serviceId)
+                .take(3)
+                .toList();
+            if (filtered.isEmpty) return const SizedBox.shrink();
+            return _RelatedServices(
+              services: filtered,
+              category: service.category.displayName,
+              categoryValue: service.category.value,
+            );
+          },
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+class _RightContent extends StatelessWidget {
+  const _RightContent({
+    required this.service,
+    required this.currentUser,
+    required this.aiSummaryAsync,
+  });
+
+  final ServiceModel service;
+  final UserModel? currentUser;
+  final AsyncValue<String?> aiSummaryAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _BookingCard(service: service, currentUser: currentUser),
+        const SizedBox(height: 16),
+        aiSummaryAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (summary) => summary != null
+              ? _AISummaryCard(summary: summary)
+              : const SizedBox.shrink(),
+        ),
+        const SizedBox(height: 16),
+        _MessageShareRow(service: service),
+      ],
+    );
+  }
+}
+
+class _MessageShareRow extends ConsumerWidget {
+  const _MessageShareRow({required this.service});
+  final ServiceModel service;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final user = ref.read(currentUserProvider);
+              if (user == null) return;
+              try {
+                final convo =
+                    await ChatRepository.instance.getOrCreateConversation(
+                  customerId: user.id,
+                  providerId: service.providerId,
+                  serviceId: service.id,
+                );
+                if (context.mounted) context.go('/chat/${convo.id}');
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Could not start conversation: $e'),
+                      backgroundColor: Colors.red.shade700,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.message_outlined, size: 16),
+            label: const Text('Message'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              side: const BorderSide(color: AppColors.border),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.share_outlined, size: 16),
+            label: const Text('Share'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              side: const BorderSide(color: AppColors.border),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  const _BackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            context.go(RouteNames.search);
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.arrow_back_ios_new,
+                size: 14, color: Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(
+              'Back to services',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileImageGallery extends StatelessWidget {
+  const _MobileImageGallery({
+    required this.imageUrls,
+    required this.category,
+  });
+
+  final List<String> imageUrls;
+  final ServiceCategory category;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 220,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.grey100,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrls.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: imageUrls.first,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => _ImagePlaceholder(category: category),
+              errorWidget: (_, __, ___) =>
+                  _ImagePlaceholder(category: category),
+            )
+          : _ImagePlaceholder(category: category),
     );
   }
 }
@@ -1137,6 +1310,7 @@ class _RelatedServices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = AppBreakpoints.isCompact(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1166,16 +1340,30 @@ class _RelatedServices extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        Row(
-          children: services
-              .map((s) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: ServiceCard(service: s as dynamic),
-                    ),
-                  ))
-              .toList(),
-        ),
+        if (isMobile)
+          SizedBox(
+            height: 280,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: services.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) => SizedBox(
+                width: 220,
+                child: ServiceCard(service: services[i] as dynamic),
+              ),
+            ),
+          )
+        else
+          Row(
+            children: services
+                .map((s) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: ServiceCard(service: s as dynamic),
+                      ),
+                    ))
+                .toList(),
+          ),
       ],
     );
   }

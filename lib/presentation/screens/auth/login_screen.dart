@@ -130,13 +130,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 900;
-          final viewportH = MediaQuery.sizeOf(context).height;
-          return SizedBox(
-            height: viewportH,
-            child: isWide
-                ? _WideLayout(formContent: formContent)
-                : _NarrowLayout(formContent: formContent),
-          );
+          if (isWide) {
+            return SizedBox(
+              height: MediaQuery.sizeOf(context).height,
+              child: _WideLayout(formContent: formContent),
+            );
+          }
+          return _NarrowLayout(formContent: formContent);
         },
       ),
     );

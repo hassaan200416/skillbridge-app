@@ -138,19 +138,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       backgroundColor: AppColors.secondary,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final viewportH = MediaQuery.sizeOf(context).height;
           final isWide = constraints.maxWidth > 900;
 
-          return SizedBox(
-            height: viewportH,
-            child: isWide
-                ? _RegisterWideLayout(
-                    selectedRole: _selectedRole,
-                    step: _step,
-                    formContent: formContent,
-                  )
-                : _RegisterNarrowLayout(formContent: formContent),
-          );
+          if (isWide) {
+            return SizedBox(
+              height: MediaQuery.sizeOf(context).height,
+              child: _RegisterWideLayout(
+                selectedRole: _selectedRole,
+                step: _step,
+                formContent: formContent,
+              ),
+            );
+          }
+          return _RegisterNarrowLayout(formContent: formContent);
         },
       ),
     );

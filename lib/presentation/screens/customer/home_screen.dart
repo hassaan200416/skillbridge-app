@@ -37,7 +37,10 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(recentServicesProvider);
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 600 ? 16 : 24,
+            vertical: 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -119,7 +122,9 @@ class _HeroBannerState extends State<_HeroBanner> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(36),
+      padding: EdgeInsets.all(
+        MediaQuery.sizeOf(context).width < 600 ? 20 : 36,
+      ),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -134,7 +139,7 @@ class _HeroBannerState extends State<_HeroBanner> {
           Text(
             'Welcome back, ${widget.userName}.',
             style: GoogleFonts.poppins(
-              fontSize: 28,
+              fontSize: MediaQuery.sizeOf(context).width < 600 ? 20 : 28,
               fontWeight: FontWeight.w700,
               color: AppColors.white,
             ),
@@ -143,7 +148,7 @@ class _HeroBannerState extends State<_HeroBanner> {
           Text(
             'What will you discover today?',
             style: GoogleFonts.poppins(
-              fontSize: 20,
+              fontSize: MediaQuery.sizeOf(context).width < 600 ? 15 : 20,
               fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
@@ -336,15 +341,16 @@ class _CategoryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900 ? 10 : 5;
+        final w = constraints.maxWidth;
+        final crossAxisCount = w > 900 ? 10 : w > 500 ? 5 : 4;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.9,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           itemCount: _categories.length,
           itemBuilder: (_, i) {
@@ -445,7 +451,13 @@ class _FeaturedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 24) / 3;
+        final w = constraints.maxWidth;
+        // On mobile show 1.2 cards, on tablet 2, on desktop 3
+        final itemWidth = w < 600
+            ? w * 0.78
+            : w < 900
+                ? (w - 16) / 2
+                : (w - 32) / 3;
         return SizedBox(
           height: 300,
           child: ListView.separated(
