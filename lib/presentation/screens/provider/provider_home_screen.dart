@@ -296,29 +296,64 @@ class _RecentBookingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isNarrow = width < 420;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Recent Bookings',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.secondary,
-                )),
-            TextButton(
-              onPressed: () => context.go(RouteNames.incomingBookings),
-              child: Text('View All',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+        if (isNarrow)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Recent Bookings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.secondary,
                   )),
-            ),
-          ],
-        ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => context.go(RouteNames.incomingBookings),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 36),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text('View All',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      )),
+                ),
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: Text('Recent Bookings',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              TextButton(
+                onPressed: () => context.go(RouteNames.incomingBookings),
+                child: Text('View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    )),
+              ),
+            ],
+          ),
         const SizedBox(height: 12),
         bookingsAsync.when(
           loading: () => const Center(
@@ -394,6 +429,7 @@ class _RecentBookingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.sizeOf(context).width < 420;
     final rawName = booking.customerName?.trim();
     final initials = (rawName != null && rawName.isNotEmpty)
         ? rawName.substring(0, 1).toUpperCase()
@@ -410,6 +446,7 @@ class _RecentBookingRow extends StatelessWidget {
                 ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
               radius: 22,
@@ -428,43 +465,80 @@ class _RecentBookingRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(booking.customerName ?? 'Customer',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.secondary,
-                      )),
-                  Text(booking.serviceName ?? 'Service',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppColors.grey500,
-                      )),
-                  const SizedBox(height: 4),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.access_time,
-                          size: 12, color: AppColors.grey400),
-                      const SizedBox(width: 4),
-                      Text(
-                          DateFormat('MMM d, h:mm a')
-                              .format(booking.bookingDate),
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.grey500,
-                          )),
-                      const SizedBox(width: 10),
-                      Text('PKR ${booking.priceAtBooking.toStringAsFixed(0)}',
+                      Expanded(
+                        child: Text(
+                          booking.customerName ?? 'Customer',
                           style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.secondary,
-                          )),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isNarrow) ...[
+                        const SizedBox(width: 10),
+                        _StatusBadge(status: booking.status),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    booking.serviceName ?? 'Service',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.grey500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.access_time,
+                              size: 12, color: AppColors.grey400),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              DateFormat(isNarrow ? 'MMM d' : 'MMM d, h:mm a')
+                                  .format(booking.bookingDate),
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: AppColors.grey500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'PKR ${booking.priceAtBooking.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.secondary,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
-            _StatusBadge(status: booking.status),
+            if (!isNarrow) ...[
+              const SizedBox(width: 10),
+              _StatusBadge(status: booking.status),
+            ],
           ],
         ),
       ),

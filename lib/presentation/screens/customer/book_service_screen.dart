@@ -16,6 +16,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/route_names.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../presentation/providers/auth_provider.dart';
@@ -45,12 +46,15 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
   Widget build(BuildContext context) {
     final serviceAsync = ref.watch(serviceDetailProvider(widget.serviceId));
     final currentUser = ref.watch(currentUserProvider);
+    final showSidebar = AppBreakpoints.showSidebar(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _CustomerBottomNavBar(),
       body: Row(
         children: [
-          const AppSidebar(role: UserRole.customer, currentRoute: '/book'),
+          if (showSidebar)
+            const AppSidebar(role: UserRole.customer, currentRoute: '/book'),
           Expanded(
             child: serviceAsync.when(
               loading: () => const Center(
@@ -59,24 +63,74 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (service) => Column(
                 children: [
-                  const AppTopBar(),
+                  if (showSidebar) const AppTopBar(),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // LEFT — date + time picker
-                          Expanded(
-                            flex: 55,
-                            child: Column(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: showSidebar ? 24 : 16,
+                        vertical: 24,
+                      ),
+                      child: showSidebar
+                          ? Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Service mini card
+                                Expanded(
+                                  flex: 55,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _ServiceMiniCard(service: service),
+                                      const SizedBox(height: 24),
+                                      _CalendarCard(
+                                        focusedDay: _focusedDay,
+                                        selectedDay: _selectedDay,
+                                        onDaySelected: (sel, foc) => setState(
+                                          () {
+                                            _selectedDay = sel;
+                                            _focusedDay = foc;
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 28),
+                                      _TimeSlotSection(
+                                        selectedSlot: _selectedTimeSlot,
+                                        onSlotSelected: (slot) => setState(
+                                          () => _selectedTimeSlot = slot,
+                                        ),
+                                        morningSlots: _morningSlots,
+                                        afternoonSlots: _afternoonSlots,
+                                        eveningSlots: _eveningSlots,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                SizedBox(
+                                  width: 360,
+                                  child: _BookingSummaryCard(
+                                    service: service,
+                                    selectedDay: _selectedDay,
+                                    selectedSlot: _selectedTimeSlot,
+                                    currentUser: currentUser,
+                                    onConfirm: () => _confirmBooking(service),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 _ServiceMiniCard(service: service),
-                                const SizedBox(height: 24),
-
-                                // Calendar
+                                const SizedBox(height: 16),
+                                _BookingSummaryCard(
+                                  service: service,
+                                  selectedDay: _selectedDay,
+                                  selectedSlot: _selectedTimeSlot,
+                                  currentUser: currentUser,
+                                  onConfirm: () => _confirmBooking(service),
+                                ),
+                                const SizedBox(height: 16),
                                 _CalendarCard(
                                   focusedDay: _focusedDay,
                                   selectedDay: _selectedDay,
@@ -85,9 +139,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                                     _focusedDay = foc;
                                   }),
                                 ),
-                                const SizedBox(height: 28),
-
-                                // Time slots
+                                const SizedBox(height: 20),
                                 _TimeSlotSection(
                                   selectedSlot: _selectedTimeSlot,
                                   onSlotSelected: (slot) =>
@@ -98,23 +150,6 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                                 ),
                               ],
                             ),
-                          ),
-
-                          const SizedBox(width: 24),
-
-                          // RIGHT — booking summary
-                          SizedBox(
-                            width: 360,
-                            child: _BookingSummaryCard(
-                              service: service,
-                              selectedDay: _selectedDay,
-                              selectedSlot: _selectedTimeSlot,
-                              currentUser: currentUser,
-                              onConfirm: () => _confirmBooking(service),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
@@ -819,5 +854,75 @@ class _PriceRow extends StatelessWidget {
                 color: AppColors.secondary)),
       ],
     );
+  }
+}
+
+class _CustomerBottomNavBar extends StatelessWidget {
+  const _CustomerBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final currentIndex = _getIndex(location);
+
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (index) => _navigate(context, index),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.favorite_outline),
+          selectedIcon: Icon(Icons.favorite),
+          label: 'Saved',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
+  int _getIndex(String location) {
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/search') || location.startsWith('/service/')) {
+      return 1;
+    }
+    if (location.startsWith('/bookings') || location.startsWith('/book/')) {
+      return 2;
+    }
+    if (location.startsWith('/saved')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
+
+  void _navigate(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go(RouteNames.customerHome);
+      case 1:
+        context.go(RouteNames.search);
+      case 2:
+        context.go(RouteNames.myBookings);
+      case 3:
+        context.go(RouteNames.wishlist);
+      case 4:
+        context.go(RouteNames.customerProfile);
+    }
   }
 }

@@ -79,9 +79,13 @@ class _CustomerProfileScreenState extends ConsumerState<CustomerProfileScreen> {
     final bookingsAsync = ref.watch(customerBookingsProvider(user.id));
     final width = MediaQuery.sizeOf(context).width;
     final twoColumn = width >= 1000;
+    final isMobile = width < 600;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 32,
+        vertical: isMobile ? 16 : 24,
+      ),
       child: Form(
         key: _formKey,
         onChanged: _markDirty,
@@ -91,13 +95,14 @@ class _CustomerProfileScreenState extends ConsumerState<CustomerProfileScreen> {
             // Header
             Text('My Profile',
                 style: GoogleFonts.poppins(
-                  fontSize: 28,
+                  fontSize: isMobile ? 24 : 28,
                   fontWeight: FontWeight.w700,
                   color: _kInk,
                 )),
             const SizedBox(height: 2),
             Text('Manage your personal details',
-                style: GoogleFonts.inter(fontSize: 13, color: _kMuted)),
+                style: GoogleFonts.inter(
+                    fontSize: isMobile ? 12.5 : 13, color: _kMuted)),
             const SizedBox(height: 24),
 
             // Two-column layout
@@ -671,6 +676,13 @@ class _RightPanel extends ConsumerWidget {
     final busy = authState.isLoading;
     final width = MediaQuery.sizeOf(context).width;
     final gridTwoCol = width >= 900;
+    final isMobile = width < 600;
+
+    Future<void> logout() async {
+      await ref.read(authNotifierProvider.notifier).logout();
+      if (!context.mounted) return;
+      context.go(RouteNames.login);
+    }
 
     Widget pair(Widget a, Widget b) {
       if (gridTwoCol) {
@@ -687,7 +699,7 @@ class _RightPanel extends ConsumerWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -698,13 +710,14 @@ class _RightPanel extends ConsumerWidget {
         children: [
           Text('Personal Details',
               style: GoogleFonts.poppins(
-                fontSize: 20,
+                fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w700,
                 color: _kInk,
               )),
           const SizedBox(height: 4),
           Text('Update your personal information.',
-              style: GoogleFonts.inter(fontSize: 13, color: _kMuted)),
+              style: GoogleFonts.inter(
+                  fontSize: isMobile ? 12.5 : 13, color: _kMuted)),
           const SizedBox(height: 20),
 
           // Name + Phone
@@ -754,54 +767,163 @@ class _RightPanel extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // Actions
-          Row(
-            children: [
-              const Icon(Icons.info_outline, color: _kPrimary, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Changes are saved immediately.',
-                  style: GoogleFonts.inter(fontSize: 12.5, color: _kMuted),
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: (busy || !dirty) ? null : onDiscard,
-                child: Text('Discard',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: dirty ? _kMuted : _kMuted.withValues(alpha: 0.5),
-                    )),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 46,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kPrimary,
-                    disabledBackgroundColor: _kPrimary.withValues(alpha: 0.4),
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: (busy || !dirty) ? null : onSave,
-                  child: busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.2),
-                        )
-                      : Text('Update Profile',
+          isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            color: _kPrimary, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Changes are saved immediately.',
+                            style: GoogleFonts.inter(
+                                fontSize: 12.5, color: _kMuted),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: (busy || !dirty) ? null : onDiscard,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              side: BorderSide(
+                                color: dirty
+                                    ? _kBorder
+                                    : _kBorder.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            child: Text(
+                              'Discard',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    dirty ? _kMuted : _kMuted.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _kPrimary,
+                                disabledBackgroundColor:
+                                    _kPrimary.withValues(alpha: 0.4),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: (busy || !dirty) ? null : onSave,
+                              child: busy
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2.2),
+                                    )
+                                  : Text('Update',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      )),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: _kPrimary, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Changes are saved immediately.',
+                        style:
+                            GoogleFonts.inter(fontSize: 12.5, color: _kMuted),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: (busy || !dirty) ? null : onDiscard,
+                      child: Text('Discard',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: dirty
+                                ? _kMuted
+                                : _kMuted.withValues(alpha: 0.5),
                           )),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 46,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _kPrimary,
+                          disabledBackgroundColor:
+                              _kPrimary.withValues(alpha: 0.4),
+                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: (busy || !dirty) ? null : onSave,
+                        child: busy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2.2),
+                              )
+                            : Text('Update Profile',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                )),
+                      ),
+                    ),
+                  ],
+                ),
+
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 14),
+
+          SizedBox(
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : logout,
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(
+                  color: _kRedFg.withValues(alpha: busy ? 0.4 : 1),
                 ),
               ),
-            ],
+              icon: const Icon(Icons.logout, size: 18, color: _kRedFg),
+              label: Text(
+                'Logout',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _kRedFg,
+                ),
+              ),
+            ),
           ),
         ],
       ),

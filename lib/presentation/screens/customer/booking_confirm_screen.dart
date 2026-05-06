@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/route_names.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../presentation/providers/auth_provider.dart';
@@ -37,6 +38,7 @@ class _BookingConfirmScreenState extends ConsumerState<BookingConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     final bookingState = ref.watch(bookingActionProvider);
+    final showSidebar = AppBreakpoints.showSidebar(context);
 
     ref.listen(bookingActionProvider, (prev, next) {
       if (next.isSuccess && next.result != null && !_confirmed) {
@@ -67,21 +69,101 @@ class _BookingConfirmScreenState extends ConsumerState<BookingConfirmScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _CustomerBottomNavBar(),
       body: Row(
         children: [
-          const AppSidebar(
-              role: UserRole.customer, currentRoute: '/book/confirm'),
+          if (showSidebar)
+            const AppSidebar(
+                role: UserRole.customer, currentRoute: '/book/confirm'),
           Expanded(
             child: Column(
               children: [
-                const AppTopBar(),
+                if (showSidebar) const AppTopBar(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 680),
-                        child: Column(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: showSidebar ? 24 : 16,
+                      vertical: 24,
+                    ),
+                    child: showSidebar
+                        ? Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 680),
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 40),
+                                  // Success checkmark
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.check,
+                                        size: 44, color: Colors.white),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    _confirmed
+                                        ? 'Booking Request Sent!'
+                                        : 'Confirm Your Booking',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.secondary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 40),
+                                    child: Text(
+                                      _confirmed
+                                          ? 'Your request has been sent to the provider.'
+                                          : 'Review details below and confirm to send the request.',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        color: AppColors.grey500,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  _SummaryCard(
+                                    serviceName: serviceName,
+                                    providerName: providerName,
+                                    bookingDate: bookingDate,
+                                    timeSlot: timeSlot,
+                                    price: price,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _InfoAlert(confirmed: _confirmed),
+                                  const SizedBox(height: 28),
+                                  if (!_confirmed)
+                                    _ConfirmButton(
+                                      isLoading: bookingState.isLoading,
+                                      onConfirm: () =>
+                                          _submit(bookingDate, timeSlot, price),
+                                    )
+                                  else
+                                    _PostSuccessButtons(),
+                                  const SizedBox(height: 20),
+                                  if (_confirmed && _createdBookingId != null)
+                                    Text(
+                                      'Order ID: #${_createdBookingId!.substring(0, 8).toUpperCase()} • Need help? Contact Support',
+                                      style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: AppColors.grey400),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  const SizedBox(height: 40),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Column(
                           children: [
                             const SizedBox(height: 40),
                             // Success checkmark
@@ -162,8 +244,6 @@ class _BookingConfirmScreenState extends ConsumerState<BookingConfirmScreen> {
                             const SizedBox(height: 40),
                           ],
                         ),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -493,45 +573,131 @@ class _ConfirmButton extends StatelessWidget {
 class _PostSuccessButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => context.go(RouteNames.myBookings),
-            icon: const Icon(Icons.list_alt, size: 18),
-            label: Text('View My Bookings',
-                style: GoogleFonts.poppins(
-                    fontSize: 15, fontWeight: FontWeight.w600)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+        final firstButton = ElevatedButton.icon(
+          onPressed: () => context.go(RouteNames.myBookings),
+          icon: const Icon(Icons.list_alt, size: 18),
+          label: Text('View My Bookings',
+              style:
+                  GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
           ),
+        );
+        final secondButton = OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.customerHome),
+          icon: const Icon(Icons.home_outlined, size: 18),
+          label: Text('Return Home',
+              style:
+                  GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+
+        if (compact) {
+          return Column(
+            children: [
+              SizedBox(width: double.infinity, child: firstButton),
+              const SizedBox(height: 12),
+              SizedBox(width: double.infinity, child: secondButton),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: firstButton),
+            const SizedBox(width: 12),
+            Expanded(child: secondButton),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CustomerBottomNavBar extends StatelessWidget {
+  const _CustomerBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final currentIndex = _getIndex(location);
+
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (index) => _navigate(context, index),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => context.go(RouteNames.customerHome),
-            icon: const Icon(Icons.home_outlined, size: 18),
-            label: Text('Return Home',
-                style: GoogleFonts.poppins(
-                    fontSize: 15, fontWeight: FontWeight.w600)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.favorite_outline),
+          selectedIcon: Icon(Icons.favorite),
+          label: 'Saved',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
         ),
       ],
     );
+  }
+
+  int _getIndex(String location) {
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/search') || location.startsWith('/service/')) {
+      return 1;
+    }
+    if (location.startsWith('/bookings') ||
+        location.startsWith('/book/') ||
+        location.startsWith('/booking/')) {
+      return 2;
+    }
+    if (location.startsWith('/saved')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
+
+  void _navigate(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go(RouteNames.customerHome);
+      case 1:
+        context.go(RouteNames.search);
+      case 2:
+        context.go(RouteNames.myBookings);
+      case 3:
+        context.go(RouteNames.wishlist);
+      case 4:
+        context.go(RouteNames.customerProfile);
+    }
   }
 }
 

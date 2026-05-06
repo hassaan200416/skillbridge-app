@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../data/models/service_model.dart';
 import '../../../presentation/providers/auth_provider.dart';
@@ -33,7 +34,7 @@ class WishlistScreen extends ConsumerWidget {
       ),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (services) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 480 ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -159,7 +160,17 @@ class _ServiceGrid extends StatelessWidget {
           ? 4
           : constraints.maxWidth > 800
               ? 3
-              : 2;
+              : constraints.maxWidth < 360
+                  ? 1
+                  : 2;
+
+      // Make tiles taller on small screens so the info section has enough
+      // space under the 4:3 image area.
+      final childAspectRatio = constraints.maxWidth < 480
+          ? 0.68
+          : constraints.maxWidth < 800
+              ? 0.74
+              : 0.78;
       // +1 cell for the "Discover More" CTA
       final totalItems = services.length + 1;
       return GridView.builder(
@@ -167,9 +178,9 @@ class _ServiceGrid extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
-          childAspectRatio: 0.78,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+          childAspectRatio: childAspectRatio,
+          crossAxisSpacing: constraints.maxWidth < 480 ? 12 : 16,
+          mainAxisSpacing: constraints.maxWidth < 480 ? 12 : 16,
         ),
         itemCount: totalItems,
         itemBuilder: (_, i) {
@@ -297,7 +308,7 @@ class _SavedServiceCard extends ConsumerWidget {
             // Info
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -311,6 +322,20 @@ class _SavedServiceCard extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    // Same description rendering as `ServiceCard` (dashboard/home/search)
+                    if (service.description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, bottom: 6),
+                        child: Text(
+                          service.description,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.grey500,
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     const SizedBox(height: 6),
                     Row(
                       children: [

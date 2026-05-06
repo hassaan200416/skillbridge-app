@@ -16,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/route_names.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../presentation/providers/auth_provider.dart';
@@ -31,12 +32,15 @@ class BookingDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
+    final showSidebar = AppBreakpoints.showSidebar(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _CustomerBottomNavBar(),
       body: Row(
         children: [
-          const AppSidebar(role: UserRole.customer, currentRoute: '/booking'),
+          if (showSidebar)
+            const AppSidebar(role: UserRole.customer, currentRoute: '/booking'),
           Expanded(
             child: bookingAsync.when(
               loading: () => const Center(
@@ -45,73 +49,50 @@ class BookingDetailScreen extends ConsumerWidget {
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (booking) => Column(
                 children: [
-                  const AppTopBar(),
+                  if (showSidebar) const AppTopBar(),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // LEFT — details
-                          Expanded(
-                            flex: 65,
-                            child: Column(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: showSidebar ? 24 : 16,
+                        vertical: 24,
+                      ),
+                      child: showSidebar
+                          ? Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _Breadcrumb(),
-                                const SizedBox(height: 16),
-                                _StatusBadge(status: booking.status),
-                                const SizedBox(height: 8),
-                                Text(
-                                  booking.serviceName ?? 'Service',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.secondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-
-                                // Date + Total cards row
-                                _DateAmountRow(booking: booking),
-
-                                const SizedBox(height: 20),
-
-                                // Note card (only if note exists)
-                                if (booking.note != null &&
-                                    booking.note!.isNotEmpty) ...[
-                                  _NoteCard(note: booking.note!),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                // Provider card
-                                _ProviderCard(booking: booking),
-
-                                // Review section (only if completed)
-                                if (booking.status ==
-                                    BookingStatus.completed) ...[
-                                  const SizedBox(height: 28),
-                                  _ReviewCtaCard(
+                                Expanded(
+                                  flex: 65,
+                                  child: _BookingDetailMainContent(
+                                    booking: booking,
                                     bookingId: bookingId,
                                     ref: ref,
                                   ),
-                                ],
+                                ),
+                                const SizedBox(width: 24),
+                                SizedBox(
+                                  width: 320,
+                                  child: _ActionCard(
+                                    booking: booking,
+                                    ref: ref,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _BookingDetailMainContent(
+                                  booking: booking,
+                                  bookingId: bookingId,
+                                  ref: ref,
+                                ),
+                                const SizedBox(height: 20),
+                                _ActionCard(
+                                  booking: booking,
+                                  ref: ref,
+                                ),
                               ],
                             ),
-                          ),
-
-                          const SizedBox(width: 24),
-
-                          // RIGHT — action card
-                          SizedBox(
-                            width: 320,
-                            child: _ActionCard(
-                              booking: booking,
-                              ref: ref,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
@@ -120,6 +101,55 @@ class BookingDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BookingDetailMainContent extends StatelessWidget {
+  const _BookingDetailMainContent({
+    required this.booking,
+    required this.bookingId,
+    required this.ref,
+  });
+
+  final BookingModel booking;
+  final String bookingId;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Breadcrumb(),
+        const SizedBox(height: 16),
+        _StatusBadge(status: booking.status),
+        const SizedBox(height: 8),
+        Text(
+          booking.serviceName ?? 'Service',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 22 : 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _DateAmountRow(booking: booking),
+        const SizedBox(height: 20),
+        if (booking.note != null && booking.note!.isNotEmpty) ...[
+          _NoteCard(note: booking.note!),
+          const SizedBox(height: 20),
+        ],
+        _ProviderCard(booking: booking),
+        if (booking.status == BookingStatus.completed) ...[
+          const SizedBox(height: 28),
+          _ReviewCtaCard(
+            bookingId: bookingId,
+            ref: ref,
+          ),
+        ],
+      ],
     );
   }
 }
@@ -235,6 +265,26 @@ class _DateAmountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    if (isMobile) {
+      return Column(
+        children: [
+          _InfoCard(
+            icon: Icons.calendar_today_outlined,
+            label: 'SERVICE DATE',
+            value: DateFormat('MMM d, yyyy').format(booking.bookingDate),
+            sub: booking.timeSlot.displayName,
+          ),
+          const SizedBox(height: 12),
+          _InfoCard(
+            icon: Icons.payments_outlined,
+            label: 'TOTAL AMOUNT',
+            value: 'PKR ${booking.priceAtBooking.toStringAsFixed(0)}',
+            sub: 'Price at time of booking',
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         Expanded(
@@ -256,6 +306,78 @@ class _DateAmountRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CustomerBottomNavBar extends StatelessWidget {
+  const _CustomerBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final currentIndex = _getIndex(location);
+
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (index) => _navigate(context, index),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.favorite_outline),
+          selectedIcon: Icon(Icons.favorite),
+          label: 'Saved',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
+  int _getIndex(String location) {
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/search') || location.startsWith('/service/')) {
+      return 1;
+    }
+    if (location.startsWith('/bookings') ||
+        location.startsWith('/book/') ||
+        location.startsWith('/booking/')) {
+      return 2;
+    }
+    if (location.startsWith('/saved')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
+
+  void _navigate(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go(RouteNames.customerHome);
+      case 1:
+        context.go(RouteNames.search);
+      case 2:
+        context.go(RouteNames.myBookings);
+      case 3:
+        context.go(RouteNames.wishlist);
+      case 4:
+        context.go(RouteNames.customerProfile);
+    }
   }
 }
 

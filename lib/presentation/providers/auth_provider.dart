@@ -15,10 +15,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../data/models/notification_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/notification_repository.dart';
 import '../../core/errors/failures.dart';
 import 'service_provider.dart';
 
@@ -170,18 +168,6 @@ class AuthNotifier extends StateNotifier<AuthState2> {
       );
       _ref.read(currentUserProvider.notifier).state = user;
       state = AuthState2(isSuccess: true, user: user);
-
-      // Self-notification (no DB enum for "general" — use platform announcement)
-      try {
-        await NotificationRepository.instance.createNotification(
-          userId: userId,
-          type: NotificationType.platformAnnouncement,
-          title: 'Profile updated',
-          body: 'Your profile has been updated successfully.',
-        );
-      } catch (_) {
-        // Non-critical if RLS or network fails
-      }
 
       return true;
     } on Failure catch (f) {

@@ -54,6 +54,7 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _CustomerBottomNavBar(),
       body: Row(
         children: [
           if (showSidebar)
@@ -1503,5 +1504,77 @@ class _Footer extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _CustomerBottomNavBar extends StatelessWidget {
+  const _CustomerBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final currentIndex = _getIndex(location);
+
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (index) => _navigate(context, index),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.favorite_outline),
+          selectedIcon: Icon(Icons.favorite),
+          label: 'Saved',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
+  int _getIndex(String location) {
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/search') || location.startsWith('/service/')) {
+      return 1;
+    }
+    if (location.startsWith('/bookings') ||
+        location.startsWith('/book/') ||
+        location.startsWith('/booking/')) {
+      return 2;
+    }
+    if (location.startsWith('/saved')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
+
+  void _navigate(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go(RouteNames.customerHome);
+      case 1:
+        context.go(RouteNames.search);
+      case 2:
+        context.go(RouteNames.myBookings);
+      case 3:
+        context.go(RouteNames.wishlist);
+      case 4:
+        context.go(RouteNames.customerProfile);
+    }
   }
 }

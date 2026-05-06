@@ -33,6 +33,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     if (currentUser == null) return const SizedBox.shrink();
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     final bookingsAsync = ref.watch(customerBookingsProvider(currentUser.id));
     return bookingsAsync.when(
@@ -46,7 +47,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
             : bookings.where((b) => b.status == _selectedFilter).toList();
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 24,
+            vertical: 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -139,6 +143,7 @@ class _TabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
     final tabs = <(BookingStatus?, String)>[
       (null, 'All'),
       (BookingStatus.pending, 'Pending'),
@@ -157,58 +162,65 @@ class _TabBar extends StatelessWidget {
           bottom: BorderSide(color: AppColors.divider, width: 1),
         ),
       ),
-      child: Row(
-        children: tabs.map((tab) {
-          final isSelected = selectedFilter == tab.$1;
-          final count = countFor(tab.$1);
-          return GestureDetector(
-            onTap: () => onSelect(tab.$1),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
-                    width: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: tabs.map((tab) {
+            final isSelected = selectedFilter == tab.$1;
+            final count = countFor(tab.$1);
+            return GestureDetector(
+              onTap: () => onSelect(tab.$1),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 20,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isSelected ? AppColors.primary : Colors.transparent,
+                      width: 2,
+                    ),
                   ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    tab.$2,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? AppColors.primary : AppColors.grey500,
-                    ),
-                  ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected ? AppColors.primary : AppColors.grey200,
-                        borderRadius: BorderRadius.circular(10),
+                child: Row(
+                  children: [
+                    Text(
+                      tab.$2,
+                      style: GoogleFonts.inter(
+                        fontSize: isMobile ? 13 : 14,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? AppColors.primary : AppColors.grey500,
                       ),
-                      child: Text(
-                        '$count',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? Colors.white : AppColors.grey500,
+                    ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected ? AppColors.primary : AppColors.grey200,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? Colors.white : AppColors.grey500,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -222,6 +234,7 @@ class _BookingRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
     return GestureDetector(
       onTap: () => context.go('/booking/${booking.id}'),
       child: Container(
@@ -234,7 +247,6 @@ class _BookingRowCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Image thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
@@ -250,14 +262,10 @@ class _BookingRowCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-
-            // Info
             Expanded(
-              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Status badge
                   _StatusBadge(status: booking.status),
                   const SizedBox(height: 6),
                   Text(
@@ -283,33 +291,43 @@ class _BookingRowCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Price
-            Expanded(
-              flex: 1,
-              child: Text(
-                'PKR ${booking.priceAtBooking.toStringAsFixed(0)}',
-                textAlign: TextAlign.end,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isMobile ? 86 : 110),
+                  child: Text(
+                    'PKR ${booking.priceAtBooking.toStringAsFixed(0)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.poppins(
+                      fontSize: isMobile ? 13 : 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // View details link
-            TextButton(
-              onPressed: () => context.go('/booking/${booking.id}'),
-              child: Text(
-                'View Details',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.grey500,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: () => context.go('/booking/${booking.id}'),
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'View Details',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.grey500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
