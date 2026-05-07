@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------
 // provider_home_screen.dart
 //
@@ -73,24 +72,39 @@ class ProviderHomeScreen extends ConsumerWidget {
               servicesAsync: servicesAsync,
             ),
             const SizedBox(height: 28),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left 60% — recent bookings
-                Expanded(
-                  flex: 60,
-                  child: _RecentBookingsSection(bookingsAsync: bookingsAsync),
-                ),
-                const SizedBox(width: 24),
-                // Right 40% — pending requests
-                Expanded(
-                  flex: 40,
-                  child: _PendingRequestsSection(
-                    bookingsAsync: bookingsAsync,
-                    providerId: user.id,
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 800;
+                if (isMobile) {
+                  return Column(
+                    children: [
+                      _PendingRequestsSection(
+                        bookingsAsync: bookingsAsync,
+                        providerId: user.id,
+                      ),
+                      const SizedBox(height: 24),
+                      _RecentBookingsSection(bookingsAsync: bookingsAsync),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 60,
+                      child: _RecentBookingsSection(bookingsAsync: bookingsAsync),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      flex: 40,
+                      child: _PendingRequestsSection(
+                        bookingsAsync: bookingsAsync,
+                        providerId: user.id,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -121,7 +135,7 @@ class _Greeting extends StatelessWidget {
       children: [
         Text('Welcome back, $name',
             style: GoogleFonts.poppins(
-              fontSize: 32,
+              fontSize: MediaQuery.sizeOf(context).width < 600 ? 24 : 32,
               fontWeight: FontWeight.w700,
               color: AppColors.secondary,
             )),
@@ -177,6 +191,66 @@ class _MetricCards extends StatelessWidget {
     final earnings = bookings
         .where((b) => b.status == BookingStatus.completed)
         .fold<double>(0, (sum, b) => sum + b.priceAtBooking);
+
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+
+    if (isMobile) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.calendar_today_outlined,
+                  iconBg: const Color(0xFFE0F2FE),
+                  iconColor: const Color(0xFF0369A1),
+                  label: 'Total Bookings',
+                  value: '$total',
+                  highlighted: false,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.pending_actions,
+                  iconBg: const Color(0xFFFEF3C7),
+                  iconColor: const Color(0xFFD97706),
+                  label: 'Pending',
+                  value: pending.toString().padLeft(2, '0'),
+                  highlighted: false,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.handyman_outlined,
+                  iconBg: AppColors.grey100,
+                  iconColor: AppColors.grey600,
+                  label: 'Active Services',
+                  value: activeServices.toString().padLeft(2, '0'),
+                  highlighted: false,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.account_balance_wallet_outlined,
+                  iconBg: AppColors.white.withValues(alpha: 0.2),
+                  iconColor: Colors.white,
+                  label: 'Earnings',
+                  value: 'PKR ${NumberFormat('#,###').format(earnings)}',
+                  highlighted: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
 
     return Row(
       children: [

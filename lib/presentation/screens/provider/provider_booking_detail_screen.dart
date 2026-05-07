@@ -27,7 +27,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/common/app_sidebar.dart';
-import '../../widgets/common/app_top_bar.dart';
 
 // -- Design Tokens -----------------------------------------------------------
 const _kPrimary = Color(0xFF2D9B6F);
@@ -83,6 +82,8 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: _kBg,
+      bottomNavigationBar:
+          showSidebar ? null : const _ProviderBottomNavBar(selectedIndex: 2),
       body: Row(
         children: [
           if (showSidebar)
@@ -118,13 +119,14 @@ class _DetailContent extends ConsumerWidget {
     final width = MediaQuery.sizeOf(context).width;
     final useTwoColumn = width >= 1100;
 
+    final showSidebar = MediaQuery.sizeOf(context).width >= 800;
+    final horizontalPad = showSidebar ? 32.0 : 16.0;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPad, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppTopBar(),
-          const SizedBox(height: 24),
           _HeaderRow(booking: booking),
           const SizedBox(height: 24),
           if (useTwoColumn)
@@ -162,6 +164,54 @@ class _DetailContent extends ConsumerWidget {
           const SizedBox(height: 32),
         ],
       ),
+    );
+  }
+}
+
+class _ProviderBottomNavBar extends StatelessWidget {
+  const _ProviderBottomNavBar({this.selectedIndex = 0});
+  final int selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go('/provider-home');
+          case 1:
+            context.go('/my-services');
+          case 2:
+            context.go('/incoming-bookings');
+          case 3:
+            context.go('/p/analytics');
+          case 4:
+            context.go('/p/profile');
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Dashboard'),
+        NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'Services'),
+        NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book),
+            label: 'Bookings'),
+        NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Analytics'),
+        NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile'),
+      ],
     );
   }
 }

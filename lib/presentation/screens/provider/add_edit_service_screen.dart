@@ -230,6 +230,8 @@ class _AddEditServiceScreenState extends ConsumerState<AddEditServiceScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar:
+          showSidebar ? null : const _ProviderBottomNavBar(selectedIndex: 1),
       body: Row(
         children: [
           if (showSidebar)
@@ -240,7 +242,7 @@ class _AddEditServiceScreenState extends ConsumerState<AddEditServiceScreen> {
           Expanded(
             child: Column(
               children: [
-                const AppTopBar(),
+                if (showSidebar) const AppTopBar(),
                 Expanded(
                   child: Form(
                     key: _formKey,
@@ -1350,4 +1352,57 @@ String _categoryLabel(String name) {
       .split(' ')
       .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
       .join(' ');
+}
+
+class _ProviderBottomNavBar extends StatelessWidget {
+  const _ProviderBottomNavBar({this.selectedIndex = 0});
+  final int selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go(RouteNames.providerHome);
+          case 1:
+            context.go(RouteNames.myServices);
+          case 2:
+            context.go(RouteNames.incomingBookings);
+          case 3:
+            context.go(RouteNames.providerAnalytics);
+          case 4:
+            context.go(RouteNames.providerProfileEdit);
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.list_alt_outlined),
+          selectedIcon: Icon(Icons.list_alt),
+          label: 'Services',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.book_outlined),
+          selectedIcon: Icon(Icons.book),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics),
+          label: 'Analytics',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
 }
