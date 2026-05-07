@@ -905,59 +905,150 @@ class _RightPanel extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // Footer actions
-          Row(
-            children: [
-              const Icon(Icons.info_outline, color: _kPrimary, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Changes are visible to customers immediately.',
-                  style: GoogleFonts.inter(fontSize: 12.5, color: _kMuted),
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: (busy || !dirty) ? null : onDiscard,
-                child: Text(
-                  'Discard',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: dirty ? _kMuted : _kMuted.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 46,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kPrimary,
-                    disabledBackgroundColor: _kPrimary.withValues(alpha: 0.4),
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: (busy || !dirty) ? null : onSave,
-                  child: busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.2),
-                        )
-                      : Text(
-                          'Update Profile',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+          LayoutBuilder(builder: (context, c) {
+            final narrow = c.maxWidth < 500;
+            if (narrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: _kPrimary, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Changes visible to customers immediately.',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: _kMuted),
                         ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: (busy || !dirty) ? null : onDiscard,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Discard',
+                              style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kMuted)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kPrimary,
+                            disabledBackgroundColor:
+                                _kPrimary.withValues(alpha: 0.4),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: (busy || !dirty) ? null : onSave,
+                          child: busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2.2))
+                              : Text('Update Profile',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                const Icon(Icons.info_outline, color: _kPrimary, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Changes are visible to customers immediately.',
+                    style: GoogleFonts.inter(fontSize: 12.5, color: _kMuted),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: (busy || !dirty) ? null : onDiscard,
+                  child: Text('Discard',
+                      style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: dirty ? _kMuted : _kMuted.withValues(alpha: 0.5))),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 46,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _kPrimary,
+                      disabledBackgroundColor: _kPrimary.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: (busy || !dirty) ? null : onSave,
+                    child: busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.2))
+                        : Text('Update Profile',
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white)),
+                  ),
+                ),
+              ],
+            );
+          }),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      await ref.read(authNotifierProvider.notifier).logout();
+                      if (!context.mounted) return;
+                      context.go(RouteNames.login);
+                    },
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(
+                  color: _kRedFg.withValues(alpha: busy ? 0.4 : 1),
                 ),
               ),
-            ],
+              icon: const Icon(Icons.logout, size: 18, color: _kRedFg),
+              label: Text(
+                'Sign out',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _kRedFg,
+                ),
+              ),
+            ),
           ),
         ],
       ),

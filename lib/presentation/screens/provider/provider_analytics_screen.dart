@@ -119,6 +119,48 @@ class _MetricCards extends StatelessWidget {
     final completionRate =
         bookings.isNotEmpty ? (completedCount / bookings.length * 100) : 0.0;
 
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Metric(
+              icon: Icons.account_balance_wallet_outlined,
+              iconBg: const Color(0xFFE0F2FE),
+              iconColor: const Color(0xFF0369A1),
+              label: 'Total Revenue',
+              value: 'PKR ${NumberFormat('#,###').format(totalRevenue)}'),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+                child: _Metric(
+                    icon: Icons.check_circle_outline,
+                    iconBg: const Color(0xFFD1FAE5),
+                    iconColor: const Color(0xFF065F46),
+                    label: 'Completed',
+                    value: '$completedCount')),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _Metric(
+                    icon: Icons.star_outline,
+                    iconBg: const Color(0xFFFEF3C7),
+                    iconColor: const Color(0xFFD97706),
+                    label: 'Avg Rating',
+                    value:
+                        reviews.isEmpty ? 'N/A' : avgRating.toStringAsFixed(1))),
+          ]),
+          const SizedBox(height: 12),
+          _Metric(
+              icon: Icons.trending_up,
+              iconBg: AppColors.grey100,
+              iconColor: AppColors.grey600,
+              label: 'Completion Rate',
+              value: '${completionRate.toStringAsFixed(0)}%'),
+        ],
+      );
+    }
+
     return Wrap(
       spacing: 14,
       runSpacing: 14,
@@ -173,40 +215,38 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 180, maxWidth: 280),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: iconColor),
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    return Container(
+      width: isMobile ? double.infinity : null,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 14),
-            Text(label,
-                style:
-                    GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
-            const SizedBox(height: 4),
-            Text(value,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.secondary,
-                )),
-          ],
-        ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(height: 14),
+          Text(label,
+              style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.secondary,
+              )),
+        ],
       ),
     );
   }

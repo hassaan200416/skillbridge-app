@@ -30,12 +30,14 @@ class ProviderProfileScreen extends ConsumerWidget {
     final usersAsync = ref.watch(allUsersProvider);
     final servicesAsync = ref.watch(providerServicesProvider(providerId));
     final reviewsAsync = ref.watch(providerReviewsProvider(providerId));
+    final showSidebar = MediaQuery.sizeOf(context).width >= 800;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Row(
         children: [
-          const AppSidebar(role: UserRole.customer, currentRoute: '/provider'),
+          if (showSidebar)
+            const AppSidebar(role: UserRole.customer, currentRoute: '/provider'),
           Expanded(
             child: usersAsync.when(
               loading: () => const Center(
@@ -51,7 +53,7 @@ class ProviderProfileScreen extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    const AppTopBar(),
+                    if (showSidebar) const AppTopBar(),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(

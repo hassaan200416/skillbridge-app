@@ -155,7 +155,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           Expanded(
             child: Column(
               children: [
-                const AppTopBar(),
+                if (showSidebar) const AppTopBar(),
                 Consumer(
                   builder: (context, ref, _) {
                     final convoAsync = ref.watch(
