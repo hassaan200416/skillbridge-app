@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -42,6 +43,7 @@ class _ProviderReviewsScreenState extends ConsumerState<ProviderReviewsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _ProviderBottomNavBar(),
       body: Row(
         children: [
           if (showSidebar)
@@ -54,7 +56,7 @@ class _ProviderReviewsScreenState extends ConsumerState<ProviderReviewsScreen> {
               color: AppColors.background,
               child: Column(
                 children: [
-                  const AppTopBar(),
+                  if (showSidebar) const AppTopBar(),
                   Expanded(
                     child: reviewsAsync.when(
                       loading: () => const Center(
@@ -69,7 +71,10 @@ class _ProviderReviewsScreenState extends ConsumerState<ProviderReviewsScreen> {
                                 .where((r) => r.rating == _ratingFilter)
                                 .toList();
                         return SingleChildScrollView(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: showSidebar ? 24 : 16,
+                            vertical: 24,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -456,13 +461,13 @@ class _ReviewCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 1,
                 children: List.generate(5, (i) {
                   return Icon(
                     i < review.rating ? Icons.star : Icons.star_border,
                     color: const Color(0xFFF6AD55),
-                    size: 16,
+                    size: 15,
                   );
                 }),
               ),
@@ -482,6 +487,53 @@ class _ReviewCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _ProviderBottomNavBar extends StatelessWidget {
+  const _ProviderBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: 4,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go('/provider-home');
+          case 1:
+            context.go('/my-services');
+          case 2:
+            context.go('/incoming-bookings');
+          case 3:
+            context.go('/p/analytics');
+          case 4:
+            context.go('/p/profile');
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Dashboard'),
+        NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'Services'),
+        NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book),
+            label: 'Bookings'),
+        NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Analytics'),
+        NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile'),
+      ],
     );
   }
 }

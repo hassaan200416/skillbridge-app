@@ -721,6 +721,8 @@ class AdminShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      bottomNavigationBar:
+          showSidebar ? null : _AdminBottomNav(currentRoute: currentRoute),
       body: Row(
         children: [
           if (showSidebar)
@@ -731,13 +733,167 @@ class AdminShell extends ConsumerWidget {
           Expanded(
             child: Column(
               children: [
-                const AppTopBar(),
+                if (showSidebar) const AppTopBar(),
                 Expanded(child: child),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AdminBottomNav extends StatelessWidget {
+  const _AdminBottomNav({required this.currentRoute});
+  final String currentRoute;
+
+  int get _index {
+    if (currentRoute.startsWith('/admin/users')) return 1;
+    if (currentRoute.startsWith('/admin/bookings')) return 2;
+    if (currentRoute.startsWith('/admin/reviews')) return 3;
+    if (currentRoute.startsWith('/admin/services') ||
+        currentRoute.startsWith('/admin/activity') ||
+        currentRoute.startsWith('/admin/notifications') ||
+        currentRoute.startsWith('/admin/settings')) {
+      return 4;
+    }
+    return 0; // dashboard
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: _index,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go(RouteNames.adminDashboard);
+          case 1:
+            context.go(RouteNames.adminUsers);
+          case 2:
+            context.go(RouteNames.adminBookings);
+          case 3:
+            context.go(RouteNames.adminReviews);
+          case 4:
+            _showMoreSheet(context);
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.people_outline),
+          selectedIcon: Icon(Icons.people),
+          label: 'Users',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.book_outlined),
+          selectedIcon: Icon(Icons.book),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.flag_outlined),
+          selectedIcon: Icon(Icons.flag),
+          label: 'Reviews',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.more_horiz),
+          selectedIcon: Icon(Icons.more_horiz),
+          label: 'More',
+        ),
+      ],
+    );
+  }
+
+  void _showMoreSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            _MoreTile(
+              icon: Icons.fact_check_outlined,
+              label: 'Services',
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go(RouteNames.adminServices);
+              },
+            ),
+            _MoreTile(
+              icon: Icons.history_outlined,
+              label: 'Activity Log',
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go(RouteNames.adminActivity);
+              },
+            ),
+            _MoreTile(
+              icon: Icons.notifications_outlined,
+              label: 'Notifications',
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go(RouteNames.adminNotifications);
+              },
+            ),
+            _MoreTile(
+              icon: Icons.tune_outlined,
+              label: 'Settings',
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go(RouteNames.adminSettings);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreTile extends StatelessWidget {
+  const _MoreTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF2D9B6F)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF0F172A),
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 }

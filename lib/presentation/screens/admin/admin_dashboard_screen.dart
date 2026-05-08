@@ -53,7 +53,10 @@ class AdminDashboardScreen extends ConsumerWidget {
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 800 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -85,6 +88,7 @@ class _TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
     return Row(
       children: [
         Expanded(
@@ -107,17 +111,19 @@ class _TopBar extends ConsumerWidget {
             ],
           ),
         ),
-        _IconBtn(
-          icon: Icons.notifications_none,
-          onTap: () => context.go('/notifications'),
-        ),
-        const SizedBox(width: 10),
-        _IconBtn(
-          icon: Icons.help_outline,
-          onTap: () {},
-        ),
-        const SizedBox(width: 14),
-        _TopAvatar(name: user?.name, url: user?.avatarUrl),
+        if (!isMobile) ...[
+          _IconBtn(
+            icon: Icons.notifications_none,
+            onTap: () => context.go('/admin/notifications'),
+          ),
+          const SizedBox(width: 10),
+          _IconBtn(
+            icon: Icons.help_outline,
+            onTap: () {},
+          ),
+          const SizedBox(width: 14),
+          _TopAvatar(name: user?.name, url: user?.avatarUrl),
+        ],
       ],
     );
   }

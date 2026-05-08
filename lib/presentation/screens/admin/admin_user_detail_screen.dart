@@ -63,8 +63,9 @@ class AdminUserDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider(userId));
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
-    return Container(
+    return Material(
       color: _kBg,
       child: userAsync.when(
         loading: () =>
@@ -73,7 +74,10 @@ class AdminUserDetailScreen extends ConsumerWidget {
           child: Text('Error: $e', style: GoogleFonts.inter(color: _kRedFg)),
         ),
         data: (user) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 32,
+            vertical: 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -464,57 +468,100 @@ class _ModCardState extends ConsumerState<_ModCard> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Text(
-                'VERIFICATION',
-                style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white54,
-                    letterSpacing: 0.8),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                    color: user.isVerified ? _kGreenBg : _kBg,
-                    borderRadius: BorderRadius.circular(999)),
-                child: Text(
-                  user.isVerified ? 'VERIFIED' : 'NOT VERIFIED',
-                  style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: user.isVerified ? _kGreenFg : _kMuted),
+          LayoutBuilder(builder: (context, c) {
+            final narrow = c.maxWidth < 400;
+            if (narrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text('VERIFICATION',
+                        style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white54,
+                            letterSpacing: 0.8)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: user.isVerified ? _kGreenBg : _kBg,
+                          borderRadius: BorderRadius.circular(999)),
+                      child: Text(user.isVerified ? 'VERIFIED' : 'NOT VERIFIED',
+                          style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: user.isVerified ? _kGreenFg : _kMuted)),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Text('ACCOUNT HEALTH',
+                        style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white54,
+                            letterSpacing: 0.8)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: user.isSuspended ? _kRedBg : _kGreenBg,
+                          borderRadius: BorderRadius.circular(999)),
+                      child: Text(user.isSuspended ? 'SUSPENDED' : 'ACTIVE',
+                          style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: user.isSuspended ? _kRedFg : _kGreenFg)),
+                    ),
+                  ]),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Text('VERIFICATION',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white54,
+                        letterSpacing: 0.8)),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: user.isVerified ? _kGreenBg : _kBg,
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Text(user.isVerified ? 'VERIFIED' : 'NOT VERIFIED',
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: user.isVerified ? _kGreenFg : _kMuted)),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                'ACCOUNT HEALTH',
-                style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white54,
-                    letterSpacing: 0.8),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                    color: user.isSuspended ? _kRedBg : _kGreenBg,
-                    borderRadius: BorderRadius.circular(999)),
-                child: Text(
-                  user.isSuspended ? 'SUSPENDED' : 'ACTIVE',
-                  style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: user.isSuspended ? _kRedFg : _kGreenFg),
+                const Spacer(),
+                Text('ACCOUNT HEALTH',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white54,
+                        letterSpacing: 0.8)),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: user.isSuspended ? _kRedBg : _kGreenBg,
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Text(user.isSuspended ? 'SUSPENDED' : 'ACTIVE',
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: user.isSuspended ? _kRedFg : _kGreenFg)),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
           const SizedBox(height: 16),
           Row(
             children: [

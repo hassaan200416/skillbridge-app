@@ -59,7 +59,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 800 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -321,6 +324,14 @@ class _UsersTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+
+    if (isMobile) {
+      return Column(
+        children: users.map((u) => _UserCard(user: u)).toList(),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -340,6 +351,225 @@ class _UsersTable extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _UserCard extends ConsumerStatefulWidget {
+  const _UserCard({required this.user});
+  final UserModel user;
+
+  @override
+  ConsumerState<_UserCard> createState() => _UserCardState();
+}
+
+class _UserCardState extends ConsumerState<_UserCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final u = widget.user;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: avatar + name + role badge
+          Row(
+            children: [
+              _UserAvatar(name: u.name, url: u.avatarUrl, verified: u.isVerified),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      u.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kInk,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      u.email,
+                      style: GoogleFonts.inter(fontSize: 12, color: _kMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              _RoleBadge(role: u.role),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Info row: joined + status
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_outlined, size: 13, color: _kMuted),
+              const SizedBox(width: 4),
+              Text(
+                DateFormat('dd MMM yyyy').format(u.createdAt),
+                style: GoogleFonts.inter(fontSize: 12, color: _kMuted),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: u.isSuspended ? _kRedFg : const Color(0xFF065F46),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                u.isSuspended ? 'Suspended' : 'Active',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: u.isSuspended ? _kRedFg : const Color(0xFF065F46),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 10),
+          // Actions row
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go('/admin/user/${u.id}'),
+                  icon: const Icon(Icons.visibility_outlined, size: 14),
+                  label: Text('View',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _kInk,
+                    side: const BorderSide(color: _kBorder),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              if (u.role == UserRole.provider) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _toggleVerified(u),
+                    icon: Icon(
+                      u.isVerified ? Icons.verified : Icons.verified_outlined,
+                      size: 14,
+                      color: u.isVerified ? _kPrimary : _kMuted,
+                    ),
+                    label: Text(
+                      u.isVerified ? 'Verified' : 'Verify',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: u.isVerified ? _kPrimary : _kMuted,
+                      side:
+                          BorderSide(color: u.isVerified ? _kPrimary : _kBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _toggleSuspend(u),
+                  icon: Icon(
+                    u.isSuspended ? Icons.lock_open : Icons.block,
+                    size: 14,
+                    color: u.isSuspended ? _kPrimary : _kRedFg,
+                  ),
+                  label: Text(
+                    u.isSuspended ? 'Unsuspend' : 'Suspend',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: u.isSuspended ? _kPrimary : _kRedFg,
+                    side: BorderSide(color: u.isSuspended ? _kPrimary : _kRedFg),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleVerified(UserModel u) async {
+    setState(() => _busy = true);
+    await ref.read(adminUserProvider.notifier).setVerifiedStatus(
+          targetUserId: u.id,
+          isVerified: !u.isVerified,
+        );
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _toggleSuspend(UserModel u) async {
+    final action = u.isSuspended ? 'unsuspend' : 'suspend';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(
+          '${action[0].toUpperCase()}${action.substring(1)} ${u.name}?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          u.isSuspended
+              ? 'This will restore the user\'s access to the platform.'
+              : 'This will block the user from accessing the platform.',
+          style: GoogleFonts.inter(fontSize: 14, color: _kMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.inter(color: _kMuted)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: u.isSuspended ? _kPrimary : _kRedFg,
+            ),
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text(
+              u.isSuspended ? 'Unsuspend' : 'Suspend',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() => _busy = true);
+    await ref.read(adminUserProvider.notifier).setUserSuspension(
+          targetUserId: u.id,
+          suspend: !u.isSuspended,
+        );
+    if (mounted) setState(() => _busy = false);
   }
 }
 
