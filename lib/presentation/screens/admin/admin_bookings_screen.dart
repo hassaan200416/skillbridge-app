@@ -54,7 +54,10 @@ class _AdminBookingsScreenState extends ConsumerState<AdminBookingsScreen> {
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 800 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -376,6 +379,14 @@ class _BookingsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+
+    if (isMobile) {
+      return Column(
+        children: bookings.map((b) => _BookingCard(booking: b)).toList(),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -394,6 +405,241 @@ class _BookingsTable extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  const _BookingCard({required this.booking});
+  final BookingModel booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = booking;
+    final idShort = b.id.length >= 4
+        ? b.id.substring(b.id.length - 4).toUpperCase()
+        : b.id.toUpperCase();
+    final slotLabel = switch (b.timeSlot) {
+      TimeSlot.morning => 'Morning',
+      TimeSlot.afternoon => 'Afternoon',
+      TimeSlot.evening => 'Evening',
+    };
+
+    final (statusBg, statusFg, statusLabel) = switch (b.status) {
+      BookingStatus.pending => (_kPendBg, _kPendFg, 'PENDING'),
+      BookingStatus.confirmed => (_kConfBg, _kConfFg, 'CONFIRMED'),
+      BookingStatus.completed => (_kCompBg, _kCompFg, 'COMPLETED'),
+      BookingStatus.cancelled => (_kCancBg, _kCancFg, 'CANCELLED'),
+      BookingStatus.disputed => (_kCancBg, _kCancFg, 'DISPUTED'),
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: ID + status
+          Row(
+            children: [
+              Text(
+                '#SB-$idShort',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _kInk,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: statusFg,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Service name
+          Text(
+            b.serviceName ?? 'Service',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _kPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          // Date + slot
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_outlined, size: 13, color: _kMuted),
+              const SizedBox(width: 4),
+              Text(
+                DateFormat('dd MMM yyyy').format(b.bookingDate),
+                style: GoogleFonts.inter(fontSize: 12, color: _kMuted),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _kField,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  slotLabel,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _kMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Customer + Provider
+          Row(
+            children: [
+              Expanded(
+                child: _MiniParty(
+                  label: 'Customer',
+                  name: b.customerName,
+                  url: b.customerAvatarUrl,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MiniParty(
+                  label: 'Provider',
+                  name: b.providerName,
+                  url: b.providerAvatarUrl,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 10),
+          // Price + View button
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'PKR ${NumberFormat('#,###').format(b.priceAtBooking)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _kInk,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 110,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go('/admin/booking/${b.id}'),
+                  icon: const Icon(Icons.visibility_outlined, size: 14),
+                  label: Text(
+                    'View',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _kInk,
+                    side: const BorderSide(color: _kBorder),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniParty extends StatelessWidget {
+  const _MiniParty({required this.label, this.name, this.url});
+  final String label;
+  final String? name;
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final init = (name?.isNotEmpty ?? false) ? name![0].toUpperCase() : '?';
+    return Row(
+      children: [
+        if (url != null && url!.isNotEmpty)
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: _kBorder,
+            backgroundImage: NetworkImage(url!),
+            onBackgroundImageError: (_, __) {},
+          )
+        else
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: _kPrimary.withValues(alpha: 0.12),
+            child: Text(
+              init,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: _kPrimary,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: _kMuted,
+                    letterSpacing: 0.5),
+              ),
+              Text(
+                name ?? 'Unknown',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _kInk,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

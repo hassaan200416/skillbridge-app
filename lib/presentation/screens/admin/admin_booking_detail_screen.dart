@@ -41,8 +41,9 @@ class AdminBookingDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
-    return Container(
+    return Material(
       color: _kBg,
       child: bookingAsync.when(
         loading: () =>
@@ -51,7 +52,10 @@ class AdminBookingDetailScreen extends ConsumerWidget {
           child: Text('Error: $e', style: GoogleFonts.inter(color: _kCancFg)),
         ),
         data: (b) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 32,
+            vertical: 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

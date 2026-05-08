@@ -50,7 +50,10 @@ class _AdminReviewsScreenState extends ConsumerState<AdminReviewsScreen> {
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 800 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -412,6 +415,14 @@ class _ReviewsTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+
+    if (isMobile) {
+      return Column(
+        children: reviews.map((r) => _ReviewCard(review: r)).toList(),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -445,6 +456,218 @@ class _ReviewsTable extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _ReviewCard extends ConsumerStatefulWidget {
+  const _ReviewCard({required this.review});
+  final ReviewModel review;
+
+  @override
+  ConsumerState<_ReviewCard> createState() => _ReviewCardState();
+}
+
+class _ReviewCardState extends ConsumerState<_ReviewCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.review;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: r.isFlagged ? _kRedFg : _kBorder,
+            width: r.isFlagged ? 1.5 : 1),
+        boxShadow: r.isFlagged
+            ? [BoxShadow(color: _kRedFg.withValues(alpha: 0.08), blurRadius: 8)]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Red left bar for flagged
+          if (r.isFlagged)
+            Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: _kRedFg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Reviewer + status
+                Row(
+                  children: [
+                    _Avatar(name: r.customerName, url: r.customerAvatarUrl),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r.customerName ?? 'Customer',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _kInk,
+                            ),
+                          ),
+                          if ((r.customerEmail ?? '').isNotEmpty)
+                            Text(
+                              r.customerEmail!,
+                              style:
+                                  GoogleFonts.inter(fontSize: 11, color: _kMuted),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: r.isFlagged ? _kRedBg : _kGreenBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        r.isFlagged ? 'FLAGGED' : 'OK',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: r.isFlagged ? _kRedFg : _kGreenFg,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Service + rating + date
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        r.serviceName ?? 'Service',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _kPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(
+                        5,
+                        (i) => Icon(
+                          i < r.rating
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 14,
+                          color: i < r.rating ? _kAmberFg : _kBorder,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if ((r.comment ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '"${r.comment}"',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: _kInk,
+                      fontStyle: FontStyle.italic,
+                      height: 1.5,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('dd MMM yyyy').format(r.createdAt),
+                      style: GoogleFonts.inter(fontSize: 12, color: _kMuted),
+                    ),
+                    const Spacer(),
+                    if (r.isFlagged)
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _deleteReview(r),
+                        icon: const Icon(Icons.delete_outline,
+                            size: 14, color: _kRedFg),
+                        label: Text(
+                          'Delete',
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _kRedFg),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: _kRedFg),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteReview(ReviewModel r) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('Delete this review?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text(
+          'This action cannot be undone.',
+          style: GoogleFonts.inter(fontSize: 14, color: _kMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.inter(color: _kMuted)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _kRedFg),
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text('Delete',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() => _busy = true);
+    await ref.read(reviewActionProvider.notifier).deleteReview(
+          reviewId: r.id,
+          serviceId: r.serviceId,
+          providerId: r.providerId,
+        );
+    ref.invalidate(allReviewsProvider);
+    if (mounted) setState(() => _busy = false);
   }
 }
 

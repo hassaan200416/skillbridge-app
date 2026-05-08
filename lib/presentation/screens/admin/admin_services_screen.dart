@@ -57,7 +57,10 @@ class _AdminServicesScreenState extends ConsumerState<AdminServicesScreen> {
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 800 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -387,6 +390,14 @@ class _ServicesTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
+
+    if (isMobile) {
+      return Column(
+        children: services.map((s) => _ServiceCard(service: s)).toList(),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -403,6 +414,235 @@ class _ServicesTable extends ConsumerWidget {
               const Divider(
                   height: 1, color: _kBorder, indent: 20, endIndent: 20),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceCard extends ConsumerStatefulWidget {
+  const _ServiceCard({required this.service});
+  final ServiceModel service;
+
+  @override
+  ConsumerState<_ServiceCard> createState() => _ServiceCardState();
+}
+
+class _ServiceCardState extends ConsumerState<_ServiceCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.service;
+    final catLabel = s.category.value
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
+
+    final (statusColor, statusLabel) = s.isDraft
+        ? (_kAmberFg, 'Draft')
+        : s.isActive
+            ? (_kGreenFg, 'Active')
+            : (_kRedFg, 'Inactive');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title + status
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  s.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _kInk,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration:
+                        BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    statusLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Bookings count
+          Text(
+            '${s.bookingCount} bookings',
+            style: GoogleFonts.inter(fontSize: 12, color: _kMuted),
+          ),
+          const SizedBox(height: 10),
+          // Provider + category + price
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _InfoChip(
+                icon: Icons.person_outline,
+                label: s.providerName ?? 'Provider',
+              ),
+              _InfoChip(
+                icon: Icons.category_outlined,
+                label: catLabel,
+              ),
+              _InfoChip(
+                icon: Icons.payments_outlined,
+                label:
+                    '${s.priceType == PriceType.startingFrom ? 'From ' : ''}PKR ${NumberFormat('#,###').format(s.price)}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 10),
+          // Actions
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go('/admin/service/${s.id}'),
+                  icon: const Icon(Icons.visibility_outlined, size: 14),
+                  label: Text('View',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _kInk,
+                    side: const BorderSide(color: _kBorder),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _toggleActive(s),
+                  icon: Icon(
+                    s.isActive
+                        ? Icons.toggle_on_outlined
+                        : Icons.toggle_off_outlined,
+                    size: 14,
+                    color: s.isActive ? _kGreenFg : _kRedFg,
+                  ),
+                  label: Text(
+                    s.isActive ? 'Deactivate' : 'Activate',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: s.isActive ? _kRedFg : _kGreenFg,
+                    side: BorderSide(color: s.isActive ? _kRedFg : _kGreenFg),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleActive(ServiceModel s) async {
+    final action = s.isActive ? 'deactivate' : 'activate';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(
+          '${action[0].toUpperCase()}${action.substring(1)} "${s.title}"?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          s.isActive
+              ? 'This service will be hidden from customers.'
+              : 'This service will become visible to customers.',
+          style: GoogleFonts.inter(fontSize: 14, color: _kMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.inter(color: _kMuted)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: s.isActive ? _kRedFg : _kPrimary),
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text(s.isActive ? 'Deactivate' : 'Activate',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() => _busy = true);
+    await ref.read(serviceActionProvider.notifier).updateService(
+          serviceId: s.id,
+          providerId: s.providerId,
+          isActive: !s.isActive,
+        );
+    ref.invalidate(allServicesAdminProvider);
+    if (mounted) setState(() => _busy = false);
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _kField,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: _kMuted),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+                fontSize: 11, fontWeight: FontWeight.w500, color: _kInk),
+          ),
         ],
       ),
     );

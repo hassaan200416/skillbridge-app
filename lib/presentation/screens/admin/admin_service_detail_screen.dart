@@ -47,8 +47,9 @@ class _AdminServiceDetailScreenState
   @override
   Widget build(BuildContext context) {
     final serviceAsync = ref.watch(serviceDetailProvider(widget.serviceId));
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
-    return Container(
+    return Material(
       color: _kBg,
       child: serviceAsync.when(
         loading: () =>
@@ -57,7 +58,10 @@ class _AdminServiceDetailScreenState
           child: Text('Error: $e', style: GoogleFonts.inter(color: _kRedFg)),
         ),
         data: (service) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 32,
+            vertical: 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
