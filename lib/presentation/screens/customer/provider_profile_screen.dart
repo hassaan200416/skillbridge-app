@@ -61,46 +61,62 @@ class ProviderProfileScreen extends ConsumerWidget {
                           children: [
                             _HeroHeader(provider: provider),
                             Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // LEFT
-                                  Expanded(
-                                    flex: 65,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _AboutSection(provider: provider),
-                                        const SizedBox(height: 20),
-                                        _StatsSection(
-                                          provider: provider,
-                                          servicesAsync: servicesAsync,
-                                          reviewsAsync: reviewsAsync,
-                                        ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: showSidebar ? 24 : 14,
+                                vertical: 20,
+                              ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isMobile = constraints.maxWidth < 900;
+                                  final mainLeft = Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _AboutSection(provider: provider),
+                                      const SizedBox(height: 20),
+                                      _StatsSection(
+                                        provider: provider,
+                                        servicesAsync: servicesAsync,
+                                        reviewsAsync: reviewsAsync,
+                                      ),
+                                      const SizedBox(height: 28),
+                                      _ServicesSection(
+                                          servicesAsync: servicesAsync),
+                                      if (provider.city != null ||
+                                          provider.serviceArea != null) ...[
                                         const SizedBox(height: 28),
-                                        _ServicesSection(
-                                            servicesAsync: servicesAsync),
-                                        if (provider.city != null ||
-                                            provider.serviceArea != null) ...[
-                                          const SizedBox(height: 28),
-                                          _LocationSection(provider: provider),
-                                        ],
+                                        _LocationSection(provider: provider),
                                       ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 24),
+                                    ],
+                                  );
 
-                                  // RIGHT
-                                  SizedBox(
-                                    width: 320,
-                                    child: _BookingCard(
-                                      provider: provider,
-                                      servicesAsync: servicesAsync,
-                                    ),
-                                  ),
-                                ],
+                                  final bookingCard = _BookingCard(
+                                    provider: provider,
+                                    servicesAsync: servicesAsync,
+                                  );
+
+                                  if (isMobile) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        bookingCard,
+                                        const SizedBox(height: 20),
+                                        mainLeft,
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(flex: 65, child: mainLeft),
+                                      const SizedBox(width: 24),
+                                      SizedBox(width: 320, child: bookingCard),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -126,8 +142,9 @@ class _HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
     return Container(
-      padding: const EdgeInsets.all(40),
+      padding: EdgeInsets.all(isMobile ? 18 : 40),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.secondary, Color(0xFF0A1628)],
@@ -135,88 +152,62 @@ class _HeroHeader extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          Container(
-            width: 110,
-            height: 110,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-            ),
-            child: ClipOval(
-              child: provider.avatarUrl != null
-                  ? Image.network(
-                      provider.avatarUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _avatarFallback(),
-                    )
-                  : _avatarFallback(),
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (isMobile)
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                ),
+                child: ClipOval(
+                  child: provider.avatarUrl != null
+                      ? Image.network(
+                          provider.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _avatarFallback(),
+                        )
+                      : _avatarFallback(),
+                ),
+              ),
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    if (provider.isVerified) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.verified,
-                                size: 12, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text('VERIFIED',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                )),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  provider.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: ClipOval(
+                    child: provider.avatarUrl != null
+                        ? Image.network(
+                            provider.avatarUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _avatarFallback(),
+                          )
+                        : _avatarFallback(),
                   ),
                 ),
-                if (provider.bio != null && provider.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    provider.bio!,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      height: 1.5,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                const SizedBox(width: 24),
+                Expanded(
+                  child: _HeroMeta(provider: provider, isMobile: isMobile),
+                ),
               ],
             ),
-          ),
+          if (isMobile) ...[
+            const SizedBox(height: 12),
+            _HeroMeta(provider: provider, isMobile: isMobile),
+          ],
         ],
       ),
     );
@@ -234,6 +225,68 @@ class _HeroHeader extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _HeroMeta extends StatelessWidget {
+  const _HeroMeta({required this.provider, required this.isMobile});
+  final UserModel provider;
+  final bool isMobile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      children: [
+        if (provider.isVerified)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified, size: 12, color: Colors.white),
+                const SizedBox(width: 4),
+                Text('VERIFIED',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    )),
+              ],
+            ),
+          ),
+        const SizedBox(height: 8),
+        Text(
+          provider.name,
+          textAlign: isMobile ? TextAlign.center : TextAlign.start,
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 28 : 32,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        if (provider.bio != null && provider.bio!.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            provider.bio!,
+            textAlign: isMobile ? TextAlign.center : TextAlign.start,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.8),
+              height: 1.5,
+            ),
+            maxLines: isMobile ? 3 : 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 // ── About Section ────────────────────────────────────────────────────────────
@@ -299,38 +352,58 @@ class _StatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+    final experienceCard = _StatCard(
+      label: 'EXPERIENCE',
+      value: provider.experienceYears != null
+          ? '${provider.experienceYears}+ Years'
+          : 'New',
+    );
+    final servicesCard = servicesAsync.when(
+      loading: () => const _StatCard(label: 'SERVICES', value: '—'),
+      error: (_, __) => const _StatCard(label: 'SERVICES', value: '—'),
+      data: (services) => _StatCard(
+        label: 'SERVICES',
+        value: '${services.where((s) => s.isActive).length}',
+      ),
+    );
+    final reviewsCard = reviewsAsync.when(
+      loading: () => const _StatCard(label: 'REVIEWS', value: '—'),
+      error: (_, __) => const _StatCard(label: 'REVIEWS', value: '—'),
+      data: (reviews) => _StatCard(
+        label: 'REVIEWS',
+        value: '${reviews.length}',
+      ),
+    );
+
+    if (isMobile) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: experienceCard),
+              const SizedBox(width: 10),
+              Expanded(child: servicesCard),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: reviewsCard),
+              const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
-        Expanded(
-          child: _StatCard(
-            label: 'EXPERIENCE',
-            value: provider.experienceYears != null
-                ? '${provider.experienceYears}+ Years'
-                : 'New',
-          ),
-        ),
+        Expanded(child: experienceCard),
         const SizedBox(width: 14),
-        Expanded(
-          child: servicesAsync.when(
-            loading: () => const _StatCard(label: 'SERVICES', value: '—'),
-            error: (_, __) => const _StatCard(label: 'SERVICES', value: '—'),
-            data: (services) => _StatCard(
-              label: 'SERVICES',
-              value: '${services.where((s) => s.isActive).length}',
-            ),
-          ),
-        ),
+        Expanded(child: servicesCard),
         const SizedBox(width: 14),
-        Expanded(
-          child: reviewsAsync.when(
-            loading: () => const _StatCard(label: 'REVIEWS', value: '—'),
-            error: (_, __) => const _StatCard(label: 'REVIEWS', value: '—'),
-            data: (reviews) => _StatCard(
-              label: 'REVIEWS',
-              value: '${reviews.length}',
-            ),
-          ),
-        ),
+        Expanded(child: reviewsCard),
       ],
     );
   }
