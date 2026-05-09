@@ -13,7 +13,6 @@
 //
 // ---------------------------------------------------------------------------
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,12 +25,9 @@ import 'services/ai_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables.
-  // Web: use `assets/app.env` (bundled as a normal asset). Root `.env` is
-  // often gitignored and omitted from the web asset graph, which causes 404.
-  // Mobile/desktop: keep loading project-root `.env`.
+  // Load environment variables from bundled assets on all platforms.
   await dotenv.load(
-    fileName: kIsWeb ? 'assets/app.env' : '.env',
+    fileName: 'assets/app.env',
   );
 
   // Initialize Supabase
