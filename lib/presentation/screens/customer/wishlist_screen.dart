@@ -19,6 +19,14 @@ import '../../../data/models/service_model.dart';
 import '../../../presentation/providers/auth_provider.dart';
 import '../../../presentation/providers/service_provider.dart';
 
+/// Phones often use larger system font sizes than Chrome device mode; shorten
+/// grid tiles when text scaling is larger so card content stays inside cells.
+double _gridTextScaleFactor(BuildContext context) {
+  final raw = MediaQuery.textScalerOf(context).scale(14) / 14.0;
+  if (raw.isNaN || raw < 1) return 1.0;
+  return raw.clamp(1.0, 1.45);
+}
+
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
 
@@ -166,11 +174,13 @@ class _ServiceGrid extends StatelessWidget {
 
       // Make tiles taller on small screens so the info section has enough
       // space under the 4:3 image area.
-      final childAspectRatio = constraints.maxWidth < 480
-          ? 0.68
+      final textScale = _gridTextScaleFactor(context);
+      final baseRatio = constraints.maxWidth < 480
+          ? 0.62
           : constraints.maxWidth < 800
-              ? 0.74
+              ? 0.72
               : 0.78;
+      final childAspectRatio = baseRatio / textScale;
       // +1 cell for the "Discover More" CTA
       final totalItems = services.length + 1;
       return GridView.builder(
@@ -223,6 +233,7 @@ class _SavedServiceCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.go('/service/${service.id}'),
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
@@ -322,21 +333,26 @@ class _SavedServiceCard extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Same description rendering as `ServiceCard` (dashboard/home/search)
-                    if (service.description.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, bottom: 6),
-                        child: Text(
-                          service.description,
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.grey500,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    const SizedBox(height: 6),
+                    Expanded(
+                      child: service.description.isNotEmpty
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 6, bottom: 6),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Text(
+                                  service.description,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.grey500,
+                                    height: 1.4,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     Row(
                       children: [
                         const Icon(Icons.star_rounded,
@@ -353,16 +369,19 @@ class _SavedServiceCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '(${service.reviewCount} reviews)',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.grey500,
+                        Flexible(
+                          child: Text(
+                            '(${service.reviewCount} reviews)',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: AppColors.grey500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     Text(
                       service.priceType == PriceType.fixed
                           ? 'FIXED PRICE'
@@ -376,14 +395,17 @@ class _SavedServiceCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'PKR ${service.price.toStringAsFixed(0)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.secondary,
+                        Expanded(
+                          child: Text(
+                            'PKR ${service.price.toStringAsFixed(0)}${service.priceType == PriceType.startingFrom ? '+' : ''}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.secondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(

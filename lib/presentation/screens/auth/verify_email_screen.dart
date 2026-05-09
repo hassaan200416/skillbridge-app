@@ -115,6 +115,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(

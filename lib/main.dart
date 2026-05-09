@@ -82,6 +82,19 @@ class SkillBridgeApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       scrollBehavior: const ScrollBehaviorNoScrollbar(),
       routerConfig: router,
+      // Edge-to-edge + transparent status bar lets content draw under the
+      // system bar unless we inset it. One top SafeArea here applies to every
+      // route (customer / provider / admin) without duplicating per screen.
+      builder: (context, child) {
+        return SafeArea(
+          top: true,
+          bottom: false,
+          left: false,
+          right: false,
+          maintainBottomViewPadding: true,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,

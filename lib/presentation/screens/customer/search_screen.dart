@@ -16,6 +16,12 @@ import '../../../data/models/service_model.dart';
 import '../../../presentation/providers/service_provider.dart';
 import '../../../services/ai_service.dart';
 
+double _gridTextScaleFactor(BuildContext context) {
+  final raw = MediaQuery.textScalerOf(context).scale(14) / 14.0;
+  if (raw.isNaN || raw < 1) return 1.0;
+  return raw.clamp(1.0, 1.45);
+}
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key, this.initialCategory, this.initialQuery});
   final String? initialCategory;
@@ -791,13 +797,15 @@ class _ResultsSection extends ConsumerWidget {
                   : constraints.maxWidth > 600
                       ? 3
                       : 2;
-              final childAspectRatio = constraints.maxWidth < 480
-                  ? 0.60
+              final textScale = _gridTextScaleFactor(context);
+              final baseAspectRatio = constraints.maxWidth < 480
+                  ? 0.52
                   : constraints.maxWidth < 800
-                      ? 0.66
+                      ? 0.60
                       : constraints.maxWidth < 1200
-                          ? 0.72
-                          : 0.78;
+                          ? 0.68
+                          : 0.76;
+              final childAspectRatio = baseAspectRatio / textScale;
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -875,6 +883,7 @@ class _ServiceGridCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.go('/service/${service.id}'),
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
@@ -968,17 +977,22 @@ class _ServiceGridCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      service.description,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppColors.grey500,
-                        height: 1.4,
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Text(
+                          service.description,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.grey500,
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     // Price type label
                     Text(
                       service.priceType == PriceType.startingFrom

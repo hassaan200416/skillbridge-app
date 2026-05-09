@@ -448,7 +448,6 @@ class _NarrowLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.white,
-      child: SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.only(
           left: 0,
@@ -462,7 +461,6 @@ class _NarrowLayout extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: formContent,
         ),
-      ),
       ),
     );
   }
