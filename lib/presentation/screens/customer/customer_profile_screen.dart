@@ -256,7 +256,6 @@ class _LeftPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.sizeOf(context).width < 800;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -371,12 +370,6 @@ class _LeftPanel extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        // Quick Links — only on mobile (desktop uses sidebar)
-        if (isMobile) ...[
-          const _QuickLinksSection(),
-          const SizedBox(height: 14),
-        ],
-
         // Tip card
         Container(
           padding: const EdgeInsets.all(16),
@@ -413,104 +406,6 @@ class _LeftPanel extends StatelessWidget {
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _QuickLinksSection extends StatelessWidget {
-  const _QuickLinksSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Text(
-              'Quick Links',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _kInk,
-              ),
-            ),
-          ),
-          _QuickLinkTile(
-            icon: Icons.notifications_outlined,
-            label: 'Notifications',
-            route: RouteNames.customerNotifications,
-          ),
-          _QuickLinkTile(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            route: '/chats',
-          ),
-          _QuickLinkTile(
-            icon: Icons.campaign_outlined,
-            label: 'Announcements',
-            route: '/announcements',
-            isLast: true,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickLinkTile extends StatelessWidget {
-  const _QuickLinkTile({
-    required this.icon,
-    required this.label,
-    required this.route,
-    this.isLast = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String route;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () => context.go(route),
-          borderRadius: isLast
-              ? const BorderRadius.vertical(bottom: Radius.circular(16))
-              : BorderRadius.zero,
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: _kPrimary),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _kInk,
-                    ),
-                  ),
-                ),
-                const Icon(Icons.chevron_right, size: 18, color: _kMuted),
-              ],
-            ),
-          ),
-        ),
-        if (!isLast)
-          const Divider(height: 1, indent: 50, color: _kBorder),
       ],
     );
   }

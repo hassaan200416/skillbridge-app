@@ -439,19 +439,6 @@ class _MessageShareRow extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.share_outlined, size: 16),
-            label: const Text('Share'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.secondary,
-              side: const BorderSide(color: AppColors.border),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-        ),
       ],
     );
   }

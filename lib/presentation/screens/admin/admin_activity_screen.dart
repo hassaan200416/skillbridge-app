@@ -42,11 +42,15 @@ class AdminActivityScreen extends ConsumerWidget {
     final usersAsync = ref.watch(allUsersProvider);
     final bookingsAsync = ref.watch(getAllBookingsProvider);
     final servicesAsync = ref.watch(allServicesAdminProvider);
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -64,10 +68,9 @@ class AdminActivityScreen extends ConsumerWidget {
               style: GoogleFonts.inter(fontSize: 13.5, color: _kMuted),
             ),
             const SizedBox(height: 24),
-            Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: [
+            LayoutBuilder(builder: (context, c) {
+              final narrow = c.maxWidth < 600;
+              final cards = [
                 _MetricCard(
                   icon: Icons.people_outline,
                   iconBg: const Color(0xFFE0F2FE),
@@ -101,8 +104,36 @@ class AdminActivityScreen extends ConsumerWidget {
                     return 'PKR ${NumberFormat('#,###').format(rev)}';
                   }),
                 ),
-              ],
-            ),
+              ];
+
+              if (narrow) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 12),
+                        Expanded(child: cards[1]),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: cards[2]),
+                        const SizedBox(width: 12),
+                        Expanded(child: cards[3]),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: cards,
+              );
+            }),
             const SizedBox(height: 24),
             LayoutBuilder(
               builder: (ctx, cons) {
@@ -843,52 +874,48 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 180, maxWidth: 280),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: iconColor),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 14),
-            Text(label, style: GoogleFonts.inter(fontSize: 12, color: _kMuted)),
-            const SizedBox(height: 4),
-            valueAsync.when(
-              loading: () => const SizedBox(
-                height: 28,
-                width: 28,
-                child:
-                    CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
-              ),
-              error: (_, __) => Text('—',
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: _kInk,
-                  )),
-              data: (value) => Text(value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: _kInk,
-                  )),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(height: 14),
+          Text(label, style: GoogleFonts.inter(fontSize: 12, color: _kMuted)),
+          const SizedBox(height: 4),
+          valueAsync.when(
+            loading: () => const SizedBox(
+              height: 28,
+              width: 28,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
             ),
-          ],
-        ),
+            error: (_, __) => Text('—',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: _kInk,
+                )),
+            data: (value) => Text(value,
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: _kInk,
+                )),
+          ),
+        ],
       ),
     );
   }

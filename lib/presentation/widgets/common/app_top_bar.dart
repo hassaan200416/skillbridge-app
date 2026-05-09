@@ -40,54 +40,87 @@ class AppTopBar extends ConsumerWidget {
 
     return Container(
       height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: _kBorder)),
       ),
-      child: Row(
-        children: [
-          // ── Hamburger (toggles sidebar) ──
-          InkWell(
-            onTap: () =>
-                ref.read(sidebarExpandedProvider.notifier).state = !expanded,
-            borderRadius: BorderRadius.circular(8),
-            child: const SizedBox(
-              width: 36,
-              height: 36,
-              child: Icon(Icons.menu, size: 20, color: _kSecondary),
+      child: LayoutBuilder(builder: (context, c) {
+        final narrow = c.maxWidth < 520;
+        return Row(
+          children: [
+            // ── Hamburger (toggles sidebar) ──
+            InkWell(
+              onTap: () =>
+                  ref.read(sidebarExpandedProvider.notifier).state = !expanded,
+              borderRadius: BorderRadius.circular(8),
+              child: const SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(Icons.menu, size: 20, color: _kSecondary),
+              ),
             ),
-          ),
 
-          const SizedBox(width: 16),
+            const SizedBox(width: 10),
 
-          // ── Search bar (role-aware) ──
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: switch (user?.role) {
-                UserRole.customer => ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: _CustomerHeaderSearch(),
+            if (!narrow)
+              // ── Search bar (role-aware) ──
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: switch (user?.role) {
+                    UserRole.customer => ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: _CustomerHeaderSearch(),
+                      ),
+                    UserRole.provider => ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: _ProviderHeaderSearch(),
+                      ),
+                    _ => title != null
+                        ? Text(
+                            title!,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _kSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : const SizedBox.shrink(),
+                  },
+                ),
+              )
+            else ...[
+              if (title != null)
+                Expanded(
+                  child: Text(
+                    title!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: _kSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                UserRole.provider => ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: _ProviderHeaderSearch(),
-                  ),
-                _ => const SizedBox.shrink(),
-              },
-            ),
-          ),
+                )
+              else
+                const Spacer(),
+            ],
 
-          // ── Notification bell ──
-          if (user != null) _NotificationBell(userId: user.id, role: user.role),
+            // ── Notification bell ──
+            if (user != null)
+              _NotificationBell(userId: user.id, role: user.role),
 
-          const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
-          // ── Profile avatar dropdown ──
-          if (user != null) _ProfileDropdown(user: user),
-        ],
-      ),
+            // ── Profile avatar dropdown ──
+            if (user != null) _ProfileDropdown(user: user),
+          ],
+        );
+      }),
     );
   }
 }

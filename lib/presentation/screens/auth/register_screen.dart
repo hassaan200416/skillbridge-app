@@ -134,25 +134,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             onLogin: () => context.go(RouteNames.login),
           );
 
-    return Scaffold(
-      backgroundColor: AppColors.secondary,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 900;
-
-          if (isWide) {
-            return SizedBox(
-              height: MediaQuery.sizeOf(context).height,
-              child: _RegisterWideLayout(
-                selectedRole: _selectedRole,
-                step: _step,
-                formContent: formContent,
-              ),
-            );
-          }
-          return _RegisterNarrowLayout(formContent: formContent);
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 900;
+        return Scaffold(
+          backgroundColor: isWide ? AppColors.secondary : AppColors.white,
+          body: isWide
+              ? SizedBox(
+                  height: MediaQuery.sizeOf(context).height,
+                  child: _RegisterWideLayout(
+                    selectedRole: _selectedRole,
+                    step: _step,
+                    formContent: formContent,
+                  ),
+                )
+              : _RegisterNarrowLayout(formContent: formContent),
+        );
+      },
     );
   }
 }
@@ -385,32 +383,22 @@ class _RegisterNarrowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.secondary,
+      color: AppColors.white,
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 32,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-          ),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 40,
-                  offset: const Offset(0, 20),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-            child: formContent,
-          ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 0,
+          right: 0,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 8,
         ),
+        child: Container(
+          width: double.infinity,
+          color: AppColors.white,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: formContent,
+        ),
+      ),
       ),
     );
   }

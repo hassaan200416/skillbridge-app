@@ -425,11 +425,6 @@ class _LeftPanel extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 14),
-        // Quick Links — only on mobile (desktop uses sidebar)
-        if (MediaQuery.sizeOf(context).width < 800) ...[
-          _ProviderQuickLinksSection(),
-          const SizedBox(height: 14),
-        ],
         const _HonestTipCard(),
       ],
     );
@@ -1291,107 +1286,6 @@ class _BioFldState extends State<_BioFld> {
   }
 }
 
-class _ProviderQuickLinksSection extends StatelessWidget {
-  const _ProviderQuickLinksSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Text(
-              'Quick Links',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _kInk,
-              ),
-            ),
-          ),
-          _ProviderQuickLinkTile(
-            icon: Icons.notifications_outlined,
-            label: 'Notifications',
-            route: RouteNames.providerNotifications,
-          ),
-          _ProviderQuickLinkTile(
-            icon: Icons.star_outline,
-            label: 'My Reviews',
-            route: RouteNames.providerReviews,
-          ),
-          _ProviderQuickLinkTile(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            route: '/p/chats',
-          ),
-          _ProviderQuickLinkTile(
-            icon: Icons.campaign_outlined,
-            label: 'Announcements',
-            route: '/p/announcements',
-            isLast: true,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProviderQuickLinkTile extends StatelessWidget {
-  const _ProviderQuickLinkTile({
-    required this.icon,
-    required this.label,
-    required this.route,
-    this.isLast = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String route;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () => context.go(route),
-          borderRadius: isLast
-              ? const BorderRadius.vertical(bottom: Radius.circular(16))
-              : BorderRadius.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: _kPrimary),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _kInk,
-                    ),
-                  ),
-                ),
-                const Icon(Icons.chevron_right, size: 18, color: _kMuted),
-              ],
-            ),
-          ),
-        ),
-        if (!isLast) const Divider(height: 1, indent: 50, color: _kBorder),
-      ],
-    );
-  }
-}
-
 class _ProviderBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -1406,7 +1300,7 @@ class _ProviderBottomNavBar extends StatelessWidget {
           case 2:
             context.go(RouteNames.incomingBookings);
           case 3:
-            context.go(RouteNames.providerAnalytics);
+            _openMore(context);
           case 4:
             context.go(RouteNames.providerProfileEdit);
         }
@@ -1428,9 +1322,9 @@ class _ProviderBottomNavBar extends StatelessWidget {
           label: 'Bookings',
         ),
         NavigationDestination(
-          icon: Icon(Icons.analytics_outlined),
-          selectedIcon: Icon(Icons.analytics),
-          label: 'Analytics',
+          icon: Icon(Icons.more_horiz),
+          selectedIcon: Icon(Icons.more_horiz),
+          label: 'More',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
@@ -1438,6 +1332,75 @@ class _ProviderBottomNavBar extends StatelessWidget {
           label: 'Profile',
         ),
       ],
+    );
+  }
+
+  void _openMore(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.analytics_outlined),
+                title: const Text('Analytics'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.providerAnalytics);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: const Text('Reviews'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.providerReviews);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('Chats'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/chats');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.providerNotifications);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: const Text('Announcements'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/announcements');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

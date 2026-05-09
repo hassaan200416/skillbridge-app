@@ -177,6 +177,51 @@ class NotificationRepository {
 
   // ── Announcements ─────────────────────────────────────────────────────────
 
+  /// Creates a platform announcement (admin/system only via RLS).
+  Future<void> createAnnouncement({
+    required String title,
+    required String message,
+    required String createdBy,
+  }) async {
+    final candidates = <Map<String, dynamic>>[
+      // Most tolerant payload: satisfy common schema variants at once.
+      {
+        'title': title,
+        'message': message,
+        'body': message,
+        'created_by': createdBy,
+        'content': message,
+        'is_active': true,
+      },
+      {
+        'title': title,
+        'message': message,
+        'body': message,
+        'created_by': createdBy,
+        'is_active': true
+      },
+      {
+        'title': title,
+        'body': message,
+        'created_by': createdBy,
+        'is_active': true
+      },
+      {'title': title, 'body': message, 'created_by': createdBy},
+    ];
+
+    Object? lastError;
+    for (final payload in candidates) {
+      try {
+        await _supabase.from('announcements').insert(payload);
+        return;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    throw ServerFailure('Failed to create announcement: $lastError');
+  }
+
   /// Fetches active announcements not dismissed by this user
   Future<List<Map<String, dynamic>>> getActiveAnnouncements(
       String userId) async {
@@ -190,14 +235,22 @@ class NotificationRepository {
           .map((row) => row['announcement_id'] as String)
           .toSet();
 
-      // Get all active announcements
-      final data = await _supabase
-          .from('announcements')
-          .select()
-          .eq('is_active', true)
-          .order('created_at', ascending: false);
+      // Get active announcements (fallback if is_active column does not exist)
+      List<dynamic> data;
+      try {
+        data = await _supabase
+            .from('announcements')
+            .select()
+            .eq('is_active', true)
+            .order('created_at', ascending: false);
+      } catch (_) {
+        data = await _supabase
+            .from('announcements')
+            .select()
+            .order('created_at', ascending: false);
+      }
 
-      final all = (data as List<dynamic>)
+      final all = data
           .map((json) => Map<String, dynamic>.from(json as Map))
           .toList();
 

@@ -11,10 +11,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/route_names.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 
 const _kPrimary = Color(0xFF2D9B6F);
@@ -47,10 +50,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
     return Container(
       color: _kBg,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -82,6 +89,33 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
               return Column(
                   children: [info, const SizedBox(height: 20), announce]);
             }),
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await ref.read(authNotifierProvider.notifier).logout();
+                  if (!context.mounted) return;
+                  context.go(RouteNames.login);
+                },
+                icon: const Icon(Icons.logout, size: 18, color: _kRedFg),
+                label: Text(
+                  'Sign out',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _kRedFg,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: _kRedFg),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
             const SizedBox(height: 32),
           ],
         ),
@@ -90,12 +124,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   }
 
   Future<void> _sendAnnouncement() async {
+    final me = ref.read(currentUserProvider);
     final title = _titleCtrl.text.trim();
     final body = _bodyCtrl.text.trim();
-    if (title.isEmpty || body.isEmpty) {
+    if (me == null || title.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: const Text('Both title and message are required'),
+            content: const Text('Please fill title/message and login as admin'),
             backgroundColor: _kRedFg,
             behavior: SnackBarBehavior.floating),
       );
@@ -105,6 +140,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     setState(() => _sending = true);
 
     try {
+      // Create platform announcement (shows in Announcements screen)
+      await NotificationRepository.instance.createAnnouncement(
+        title: title,
+        message: body,
+        createdBy: me.id,
+      );
+
       // Get all users to notify
       final users = await ref.read(allUsersProvider.future);
 
@@ -115,6 +157,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           type: NotificationType.platformAnnouncement,
           title: title,
           body: body,
+          data: const {'route': '/announcements'},
         );
       }
 

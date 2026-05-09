@@ -29,20 +29,26 @@ class AnnouncementsScreen extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     final announcementsAsync = ref.watch(announcementsProvider(user.id));
+    final isMobile = MediaQuery.sizeOf(context).width < 800;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 24,
+        vertical: 24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 6,
             children: [
-              const Icon(Icons.campaign, color: _kPrimary, size: 28),
-              const SizedBox(width: 10),
+              const Icon(Icons.campaign, color: _kPrimary, size: 26),
               Text(
                 'Announcements',
                 style: GoogleFonts.poppins(
-                  fontSize: 28,
+                  fontSize: isMobile ? 22 : 28,
                   fontWeight: FontWeight.w700,
                   color: _kSecondary,
                 ),
@@ -52,7 +58,7 @@ class AnnouncementsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'Platform updates and important notices from SkillBridge.',
-            style: GoogleFonts.inter(fontSize: 14, color: _kMuted),
+            style: GoogleFonts.inter(fontSize: isMobile ? 13 : 14, color: _kMuted),
           ),
           const SizedBox(height: 24),
           announcementsAsync.when(
@@ -99,7 +105,10 @@ class AnnouncementsScreen extends ConsumerWidget {
                 children: announcements.map((a) {
                   final title = a['title'] as String? ?? 'Announcement';
                   final body =
-                      a['message'] as String? ?? a['body'] as String? ?? '';
+                      a['message'] as String? ??
+                          a['body'] as String? ??
+                          a['content'] as String? ??
+                          '';
                   final createdAt =
                       DateTime.tryParse(a['created_at'] as String? ?? '') ??
                           DateTime.now();
@@ -158,6 +167,44 @@ class AnnouncementsScreen extends ConsumerWidget {
                               // Dismiss button
                               IconButton(
                                 onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dctx) => AlertDialog(
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14)),
+                                      title: Text(
+                                        'Delete announcement?',
+                                        style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w700),
+                                      ),
+                                      content: Text(
+                                        'This will remove it from your announcements list.',
+                                        style: GoogleFonts.inter(
+                                            fontSize: 14, color: _kMuted),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(dctx).pop(false),
+                                          child: Text('Cancel',
+                                              style: GoogleFonts.inter(
+                                                  color: _kMuted)),
+                                        ),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                  0xFF991B1B)),
+                                          onPressed: () =>
+                                              Navigator.of(dctx).pop(true),
+                                          child: Text('Delete',
+                                              style: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm != true) return;
                                   await NotificationRepository.instance
                                       .dismissAnnouncement(
                                     userId: user.id,
@@ -166,9 +213,9 @@ class AnnouncementsScreen extends ConsumerWidget {
                                   ref.invalidate(
                                       announcementsProvider(user.id));
                                 },
-                                icon: const Icon(Icons.close,
+                                icon: const Icon(Icons.delete_outline,
                                     size: 18, color: _kMuted),
-                                tooltip: 'Dismiss',
+                                tooltip: 'Delete',
                                 splashRadius: 18,
                               ),
                             ],

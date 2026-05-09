@@ -554,9 +554,9 @@ class _CustomerBottomNav extends ConsumerWidget {
           label: 'Bookings',
         ),
         NavigationDestination(
-          icon: Icon(Icons.favorite_outline),
-          selectedIcon: Icon(Icons.favorite),
-          label: 'Saved',
+          icon: Icon(Icons.more_horiz),
+          selectedIcon: Icon(Icons.more_horiz),
+          label: 'More',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
@@ -571,7 +571,12 @@ class _CustomerBottomNav extends ConsumerWidget {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/search')) return 1;
     if (location.startsWith('/bookings')) return 2;
-    if (location.startsWith('/saved')) return 3;
+    if (location.startsWith('/saved') ||
+        location.startsWith('/chats') ||
+        location.startsWith('/announcements') ||
+        location.startsWith('/notifications')) {
+      return 3;
+    }
     if (location.startsWith('/profile')) return 4;
     return 0;
   }
@@ -585,10 +590,71 @@ class _CustomerBottomNav extends ConsumerWidget {
       case 2:
         context.go(RouteNames.myBookings);
       case 3:
-        context.go(RouteNames.wishlist);
+        _openMore(context);
       case 4:
         context.go(RouteNames.customerProfile);
     }
+  }
+
+  void _openMore(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('Saved'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.wishlist);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('Chats'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/chats');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: const Text('Announcements'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/announcements');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.customerNotifications);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -664,9 +730,9 @@ class _ProviderBottomNav extends ConsumerWidget {
           label: 'Bookings',
         ),
         NavigationDestination(
-          icon: Icon(Icons.analytics_outlined),
-          selectedIcon: Icon(Icons.analytics),
-          label: 'Analytics',
+          icon: Icon(Icons.more_horiz),
+          selectedIcon: Icon(Icons.more_horiz),
+          label: 'More',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
@@ -682,7 +748,10 @@ class _ProviderBottomNav extends ConsumerWidget {
     if (location.startsWith('/my-services')) return 1;
     if (location.startsWith('/incoming')) return 2;
     if (location.startsWith('/p/analytics') ||
-        location.startsWith('/analytics')) {
+        location.startsWith('/analytics') ||
+        location.startsWith('/p/chats') ||
+        location.startsWith('/p/reviews') ||
+        location.startsWith('/provider-notifications')) {
       return 3;
     }
     if (location.startsWith('/p/profile') ||
@@ -701,10 +770,71 @@ class _ProviderBottomNav extends ConsumerWidget {
       case 2:
         context.go(RouteNames.incomingBookings);
       case 3:
-        context.go(RouteNames.providerAnalytics);
+        _openMore(context);
       case 4:
         context.go(RouteNames.providerProfileEdit);
     }
+  }
+
+  void _openMore(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.analytics_outlined),
+                title: const Text('Analytics'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.providerAnalytics);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: const Text('Reviews'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/reviews');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('Chats'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/chats');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.providerNotifications);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

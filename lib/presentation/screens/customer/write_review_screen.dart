@@ -50,6 +50,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
     final reviewState = ref.watch(reviewActionProvider);
+    final showSidebar = MediaQuery.sizeOf(context).width >= 800;
 
     ref.listen(reviewActionProvider, (prev, next) {
       if (next.error != null) {
@@ -73,9 +74,11 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: showSidebar ? null : const _CustomerBottomNavBar(),
       body: Row(
         children: [
-          const AppSidebar(role: UserRole.customer, currentRoute: '/review'),
+          if (showSidebar)
+            const AppSidebar(role: UserRole.customer, currentRoute: '/review'),
           Expanded(
             child: bookingAsync.when(
               loading: () => const Center(
@@ -84,10 +87,13 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (booking) => Column(
                 children: [
-                  const AppTopBar(),
+                  if (showSidebar) const AppTopBar(),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: showSidebar ? 24 : 16,
+                        vertical: 24,
+                      ),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 680),
@@ -128,7 +134,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
 
                               // Main review card
                               Container(
-                                padding: const EdgeInsets.all(28),
+                                padding: EdgeInsets.all(showSidebar ? 28 : 18),
                                 decoration: BoxDecoration(
                                   color: AppColors.white,
                                   borderRadius: BorderRadius.circular(16),
@@ -155,21 +161,24 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                                     const SizedBox(height: 16),
 
                                     // Star rating
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                    Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 2,
+                                      runSpacing: 2,
                                       children: List.generate(5, (i) {
                                         final starNumber = i + 1;
-                                        final isSelected =
-                                            starNumber <= _rating;
+                                        final isSelected = starNumber <= _rating;
                                         return IconButton(
-                                          onPressed: () => setState(
-                                              () => _rating = starNumber),
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: reviewState.isLoading
+                                              ? null
+                                              : () => setState(
+                                                  () => _rating = starNumber),
                                           icon: Icon(
                                             isSelected
                                                 ? Icons.star
                                                 : Icons.star_border,
-                                            size: 40,
+                                            size: showSidebar ? 40 : 34,
                                             color: isSelected
                                                 ? const Color(0xFFF59E0B)
                                                 : AppColors.grey300,
@@ -203,28 +212,58 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                                     const SizedBox(height: 28),
 
                                     // Feedback heading
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'YOUR DETAILED FEEDBACK',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.grey500,
-                                            letterSpacing: 1,
+                                    LayoutBuilder(builder: (context, c) {
+                                      final narrow = c.maxWidth < 420;
+                                      final counter =
+                                          '${_commentController.text.length} / 500 characters';
+                                      if (narrow) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'YOUR DETAILED FEEDBACK',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.grey500,
+                                                letterSpacing: 1,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              counter,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: AppColors.grey400,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }
+                                      return Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'YOUR DETAILED FEEDBACK',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.grey500,
+                                              letterSpacing: 1,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          '${_commentController.text.length} / 500 characters',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            color: AppColors.grey400,
+                                          Text(
+                                            counter,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: AppColors.grey400,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      );
+                                    }),
                                     const SizedBox(height: 10),
 
                                     // Textarea
@@ -251,8 +290,8 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                                               BorderRadius.circular(12),
                                           borderSide: BorderSide.none,
                                         ),
-                                        contentPadding:
-                                            const EdgeInsets.all(14),
+                                        contentPadding: EdgeInsets.all(
+                                            showSidebar ? 14 : 12),
                                       ),
                                     ),
                                     const SizedBox(height: 24),
@@ -435,6 +474,119 @@ class _Breadcrumb extends StatelessWidget {
         Text('Write Review',
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.grey500)),
       ],
+    );
+  }
+}
+
+class _CustomerBottomNavBar extends StatelessWidget {
+  const _CustomerBottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: 2,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go(RouteNames.customerHome);
+          case 1:
+            context.go(RouteNames.search);
+          case 2:
+            context.go(RouteNames.myBookings);
+          case 3:
+            _openMore(context);
+          case 4:
+            context.go(RouteNames.customerProfile);
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today),
+          label: 'Bookings',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.more_horiz),
+          selectedIcon: Icon(Icons.more_horiz),
+          label: 'More',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
+  void _openMore(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('Saved'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.wishlist);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('Chats'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/chats');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: const Text('Announcements'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/announcements');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go(RouteNames.customerNotifications);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

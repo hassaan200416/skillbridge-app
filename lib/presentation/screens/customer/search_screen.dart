@@ -181,6 +181,146 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return null;
   }
 
+  Future<void> _openFilters(SearchParams current) async {
+    String sortBy = current.sortBy;
+    double? maxPrice = current.maxPrice;
+    double? minRating = current.minRating;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filters',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Sort by',
+                      style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.grey600)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: sortBy,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.grey50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'rating', child: Text('Top rated')),
+                      DropdownMenuItem(
+                          value: 'price_low_to_high',
+                          child: Text('Price: Low to high')),
+                      DropdownMenuItem(
+                          value: 'price_high_to_low',
+                          child: Text('Price: High to low')),
+                      DropdownMenuItem(value: 'newest', child: Text('Newest first')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setLocal(() => sortBy = v);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Max price: ${maxPrice == null ? 'Any' : 'PKR ${maxPrice!.toStringAsFixed(0)}'}',
+                    style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grey600),
+                  ),
+                  Slider(
+                    value: maxPrice ?? 20000,
+                    min: 1000,
+                    max: 20000,
+                    divisions: 19,
+                    label:
+                        maxPrice == null ? 'Any' : maxPrice?.toStringAsFixed(0),
+                    onChanged: (v) => setLocal(() => maxPrice = v),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Min rating: ${minRating == null ? 'Any' : minRating!.toStringAsFixed(1)}',
+                    style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grey600),
+                  ),
+                  Slider(
+                    value: minRating ?? 0,
+                    min: 0,
+                    max: 5,
+                    divisions: 10,
+                    label: minRating == null ? 'Any' : minRating!.toStringAsFixed(1),
+                    onChanged: (v) => setLocal(() => minRating = v == 0 ? null : v),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            ref.read(searchParamsProvider.notifier).state =
+                                SearchParams(
+                              query: current.query,
+                              category: current.category,
+                              sortBy: 'rating',
+                            );
+                            setState(() => _displayLimit = 8);
+                            Navigator.of(ctx).pop();
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            ref.read(searchParamsProvider.notifier).state =
+                                SearchParams(
+                              query: current.query,
+                              category: current.category,
+                              minPrice: current.minPrice,
+                              maxPrice: maxPrice,
+                              minRating: minRating,
+                              sortBy: sortBy,
+                            );
+                            setState(() => _displayLimit = 8);
+                            Navigator.of(ctx).pop();
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final params = ref.watch(searchParamsProvider);
@@ -218,6 +358,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           // Category chips
           _CategoryChips(
             selectedCategory: params.category,
+            onFilterTap: () => _openFilters(params),
             onSelect: (cat) {
               // Clear text query when selecting a category chip
               ref.read(searchParamsProvider.notifier).state = SearchParams(
@@ -370,10 +511,12 @@ class _CategoryChips extends StatefulWidget {
   const _CategoryChips({
     required this.selectedCategory,
     required this.onSelect,
+    required this.onFilterTap,
   });
 
   final ServiceCategory? selectedCategory;
   final void Function(ServiceCategory?) onSelect;
+  final VoidCallback onFilterTap;
 
   @override
   State<_CategoryChips> createState() => _CategoryChipsState();
@@ -492,7 +635,7 @@ class _CategoryChipsState extends State<_CategoryChips> {
         SizedBox(
           width: 110,
           child: OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: widget.onFilterTap,
             icon: const Icon(Icons.tune, size: 16),
             label: Text('Filters',
                 style: GoogleFonts.inter(
@@ -641,23 +784,26 @@ class _ResultsSection extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // 4-column grid
+            // Responsive grid
             LayoutBuilder(builder: (context, constraints) {
               final crossAxisCount = constraints.maxWidth > 900
                   ? 4
                   : constraints.maxWidth > 600
                       ? 3
                       : 2;
-              final cardHeight = crossAxisCount == 2 ? 280.0 : 300.0;
-              final cardWidth = (constraints.maxWidth -
-                      (crossAxisCount - 1) * 16) /
-                  crossAxisCount;
+              final childAspectRatio = constraints.maxWidth < 480
+                  ? 0.60
+                  : constraints.maxWidth < 800
+                      ? 0.66
+                      : constraints.maxWidth < 1200
+                          ? 0.72
+                          : 0.78;
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  childAspectRatio: cardWidth / cardHeight,
+                  childAspectRatio: childAspectRatio,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),
@@ -847,19 +993,24 @@ class _ServiceGridCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     // Price + rating row
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          service.priceType == PriceType.startingFrom
-                              ? 'PKR ${service.price.toStringAsFixed(0)}+'
-                              : 'PKR ${service.price.toStringAsFixed(0)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.secondary,
+                        Expanded(
+                          child: Text(
+                            service.priceType == PriceType.startingFrom
+                                ? 'PKR ${service.price.toStringAsFixed(0)}+'
+                                : 'PKR ${service.price.toStringAsFixed(0)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.secondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.star_rounded,
                                 size: 14, color: AppColors.starColor),

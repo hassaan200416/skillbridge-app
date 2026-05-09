@@ -125,20 +125,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onRegister: () => context.go(RouteNames.register),
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.secondary,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 900;
-          if (isWide) {
-            return SizedBox(
-              height: MediaQuery.sizeOf(context).height,
-              child: _WideLayout(formContent: formContent),
-            );
-          }
-          return _NarrowLayout(formContent: formContent);
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 900;
+        return Scaffold(
+          backgroundColor: isWide ? AppColors.secondary : AppColors.white,
+          body: isWide
+              ? SizedBox(
+                  height: MediaQuery.sizeOf(context).height,
+                  child: _WideLayout(formContent: formContent),
+                )
+              : _NarrowLayout(formContent: formContent),
+        );
+      },
     );
   }
 
@@ -448,32 +447,22 @@ class _NarrowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.secondary,
+      color: AppColors.white,
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 32,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-          ),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 40,
-                  offset: const Offset(0, 20),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-            child: formContent,
-          ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 0,
+          right: 0,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 8,
         ),
+        child: Container(
+          width: double.infinity,
+          color: AppColors.white,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: formContent,
+        ),
+      ),
       ),
     );
   }
@@ -634,16 +623,24 @@ class _FormContent extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Register link
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Don't have an account? ",
-                style:
-                    GoogleFonts.inter(color: AppColors.grey500, fontSize: 15),
+          SizedBox(
+            width: double.infinity,
+            child: Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 2,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    "Don't have an account?",
+                    style: GoogleFonts.inter(
+                        color: AppColors.grey500, fontSize: 15),
+                  ),
+                  _HoverSignUpLink(onTap: onRegister),
+                ],
               ),
-              _HoverSignUpLink(onTap: onRegister),
-            ],
+            ),
           ),
 
           const SizedBox(height: 18),
