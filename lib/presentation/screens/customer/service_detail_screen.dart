@@ -96,12 +96,18 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
                                   selectedImageIndex: _selectedImageIndex,
                                   onImageSelect: (i) => setState(
                                       () => _selectedImageIndex = i),
+                                  fallbackRoute: currentUser?.isProvider == true
+                                      ? RouteNames.myServices
+                                      : RouteNames.search,
                                 )
                               : _MobileLayout(
                                   service: service,
                                   currentUser: currentUser,
                                   reviewsAsync: reviewsAsync,
                                   aiSummaryAsync: aiSummaryAsync,
+                                  fallbackRoute: currentUser?.isProvider == true
+                                      ? RouteNames.myServices
+                                      : RouteNames.search,
                                 ),
                         ),
                       ),
@@ -129,6 +135,7 @@ class _DesktopLayout extends StatelessWidget {
     required this.serviceId,
     required this.selectedImageIndex,
     required this.onImageSelect,
+    required this.fallbackRoute,
   });
 
   final ServiceModel service;
@@ -139,13 +146,14 @@ class _DesktopLayout extends StatelessWidget {
   final String serviceId;
   final int selectedImageIndex;
   final void Function(int) onImageSelect;
+  final String fallbackRoute;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _BackButton(),
+        _BackButton(fallbackRoute: fallbackRoute),
         _Breadcrumb(
           category: service.category.displayName,
           categoryValue: service.category.value,
@@ -190,19 +198,21 @@ class _MobileLayout extends StatelessWidget {
     required this.currentUser,
     required this.reviewsAsync,
     required this.aiSummaryAsync,
+    required this.fallbackRoute,
   });
 
   final ServiceModel service;
   final UserModel? currentUser;
   final AsyncValue<List<ReviewModel>> reviewsAsync;
   final AsyncValue<String?> aiSummaryAsync;
+  final String fallbackRoute;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _BackButton(),
+        _BackButton(fallbackRoute: fallbackRoute),
         const SizedBox(height: 12),
         _MobileImageGallery(
           imageUrls: service.imageUrls,
@@ -445,7 +455,8 @@ class _MessageShareRow extends ConsumerWidget {
 }
 
 class _BackButton extends StatelessWidget {
-  const _BackButton();
+  const _BackButton({this.fallbackRoute = RouteNames.search});
+  final String fallbackRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -456,7 +467,7 @@ class _BackButton extends StatelessWidget {
           if (Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
           } else {
-            context.go(RouteNames.search);
+            context.go(fallbackRoute);
           }
         },
         borderRadius: BorderRadius.circular(8),

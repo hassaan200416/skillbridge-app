@@ -74,14 +74,17 @@ class StorageService {
   // ── Upload Operations ──────────────────────────────────────────────────────
 
   /// Upload user avatar — returns public URL
-  /// Path: avatars/{userId}/avatar.{ext}
+  /// Path: avatars/{userId}/avatar_{timestamp}.{ext}
+  /// Using a unique filename avoids storage upsert/update policy conflicts
+  /// on some RLS setups and also prevents stale image cache on web/mobile.
   Future<String> uploadAvatar({
     required String userId,
     required XFile imageFile,
   }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
     return _uploadFile(
       bucket: _avatarBucket,
-      path: '$userId/avatar.${_getExtension(imageFile.name)}',
+      path: '$userId/avatar_$timestamp.${_getExtension(imageFile.name)}',
       imageFile: imageFile,
     );
   }

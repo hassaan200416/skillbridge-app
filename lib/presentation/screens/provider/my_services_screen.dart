@@ -301,7 +301,7 @@ class _ServicesGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 360,
-        mainAxisExtent: 410,
+        mainAxisExtent: 430,
         crossAxisSpacing: 20,
         mainAxisSpacing: 20,
       ),
@@ -441,6 +441,34 @@ class _ServiceCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis),
                 ),
                 const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 14, color: Color(0xFFF59E0B)),
+                    const SizedBox(width: 4),
+                    Text(
+                      service.avgRating > 0
+                          ? service.avgRating.toStringAsFixed(1)
+                          : '—',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: service.isActive
+                            ? AppColors.secondary
+                            : AppColors.grey500,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${service.reviewCount} reviews)',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.grey500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text('STARTING FROM',
                     style: GoogleFonts.inter(
                       fontSize: 10,
@@ -460,6 +488,25 @@ class _ServiceCard extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/service/${service.id}'),
+                        icon: const Icon(Icons.visibility_outlined, size: 15),
+                        label: Text('View',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            )),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () =>
