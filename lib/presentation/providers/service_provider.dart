@@ -228,12 +228,14 @@ class ServiceActionNotifier extends StateNotifier<ServiceActionState> {
     double? price,
     List<String>? availableDays,
     List<String>? imageUrls,
+    List<XFile>? imageFiles,
     bool? isActive,
   }) async {
     state = const ServiceActionState(isLoading: true);
     try {
       final service = await _repo.updateService(
         serviceId: serviceId,
+        providerId: providerId,
         title: title,
         description: description,
         category: category,
@@ -241,6 +243,7 @@ class ServiceActionNotifier extends StateNotifier<ServiceActionState> {
         price: price,
         availableDays: availableDays,
         imageUrls: imageUrls,
+        imageFiles: imageFiles,
         isActive: isActive,
       );
       _ref.invalidate(providerServicesProvider(providerId));

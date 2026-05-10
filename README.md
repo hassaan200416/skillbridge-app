@@ -313,6 +313,4 @@ Every push to `main` triggers an automatic rebuild. No manual steps required.
 
 ---
 
-<p align="center">
-  Built with Flutter · Powered by Supabase · AI by Groq
-</p>
+Built with Flutter · Powered by Supabase · AI by Groq

@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/time_slot_model.dart';
-import '../../providers/booking_providers.dart';
+import '../../providers/booking_provider.dart';
 
 /// Displays a grid of time slots for the given [serviceId] and [selectedDate].
 /// Calls [onSlotSelected] with the chosen [TimeSlotModel] whenever the user taps a slot.

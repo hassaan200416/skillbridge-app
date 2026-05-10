@@ -169,7 +169,8 @@ class _AddEditServiceScreenState extends ConsumerState<AddEditServiceScreen> {
             priceType: _priceType,
             price: double.parse(_priceCtrl.text.trim()),
             availableDays: _availableDays,
-            imageUrls: _existingImageUrls,
+            imageUrls: _existingImageUrls, // existing remote URLs to keep
+            imageFiles: _newImages, // newly picked local files to upload
             isActive: true,
           );
     } else {
@@ -205,6 +206,73 @@ class _AddEditServiceScreenState extends ConsumerState<AddEditServiceScreen> {
           content: Text(errorMsg),
           backgroundColor: Colors.red.shade700,
           duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteService() async {
+    if (!_isEditing) return;
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Delete this service?',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+        content: Text(
+          'This will hide the service from customers and remove it from search results.',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: AppColors.grey600,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLoading = true);
+    final success = await ref.read(serviceActionProvider.notifier).deactivateService(
+          serviceId: widget.serviceId!,
+          providerId: currentUser.id,
+        );
+    if (mounted) setState(() => _isLoading = false);
+
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Service deleted successfully'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      context.go(RouteNames.myServices);
+    } else {
+      final errorState = ref.read(serviceActionProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorState.error?.message ?? 'Failed to delete service'),
+          backgroundColor: Colors.red.shade700,
         ),
       );
     }
@@ -368,6 +436,29 @@ class _AddEditServiceScreenState extends ConsumerState<AddEditServiceScreen> {
                                   spacing: 10,
                                   runSpacing: 10,
                                   children: [
+                                    if (_isEditing)
+                                      OutlinedButton.icon(
+                                        onPressed: _isLoading ? null : _deleteService,
+                                        icon: const Icon(Icons.delete_outline, size: 18),
+                                        label: Text(
+                                          'Delete Service',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.error,
+                                          side: const BorderSide(color: AppColors.error),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      ),
                                     TextButton(
                                       onPressed: () =>
                                           context.go(RouteNames.myServices),

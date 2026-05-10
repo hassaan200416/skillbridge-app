@@ -497,7 +497,7 @@ class _ProviderBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      selectedIndex: 4,
+      selectedIndex: 3,
       onDestinationSelected: (index) {
         switch (index) {
           case 0:
@@ -507,7 +507,7 @@ class _ProviderBottomNavBar extends StatelessWidget {
           case 2:
             context.go('/incoming-bookings');
           case 3:
-            context.go('/p/analytics');
+            _openMore(context);
           case 4:
             context.go('/p/profile');
         }
@@ -526,14 +526,75 @@ class _ProviderBottomNavBar extends StatelessWidget {
             selectedIcon: Icon(Icons.book),
             label: 'Bookings'),
         NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Analytics'),
+            icon: Icon(Icons.more_horiz),
+            selectedIcon: Icon(Icons.more_horiz),
+            label: 'More'),
         NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile'),
       ],
+    );
+  }
+
+  void _openMore(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.analytics_outlined),
+                title: const Text('Analytics'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/analytics');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: const Text('Reviews'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/reviews');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('Chats'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/p/chats');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/provider-notifications');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

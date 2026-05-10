@@ -81,8 +81,9 @@ class _MyServicesScreenState extends ConsumerState<MyServicesScreen> {
                 }).toList();
 
           final activeCount = services.where((s) => s.isActive).length;
+          final width = MediaQuery.sizeOf(context).width;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(width < 420 ? 12 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -118,43 +119,46 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('My Services',
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.secondary,
-                  )),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final titleBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('My Services',
+                style: GoogleFonts.poppins(
+                  fontSize: compact ? 24 : 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.secondary,
+                )),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 6),
-                  Text('$activeCount active',
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text('$activeCount active',
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                       )),
-                ],
-              ),
-            ],
-          ),
-        ),
-        ElevatedButton.icon(
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final addButton = ElevatedButton.icon(
           onPressed: () => context.go(RouteNames.addService),
           icon: const Icon(Icons.add, size: 16),
           label: Text('Add New Service',
@@ -173,8 +177,28 @@ class _Header extends StatelessWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: VisualDensity.compact,
           ),
-        ),
-      ],
+        );
+
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              titleBlock,
+              const SizedBox(height: 10),
+              addButton,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: titleBlock),
+            const SizedBox(width: 12),
+            addButton,
+          ],
+        );
+      },
     );
   }
 }
@@ -197,7 +221,9 @@ class _FilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: AppColors.divider),
@@ -211,6 +237,7 @@ class _FilterTabs extends StatelessWidget {
           const SizedBox(width: 20),
           _tab('Inactive', inactive, 'inactive'),
         ],
+      ),
       ),
     );
   }
@@ -230,13 +257,17 @@ class _FilterTabs extends StatelessWidget {
           ),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? AppColors.primary : AppColors.grey500,
-                )),
+            Flexible(
+              child: Text(label,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? AppColors.primary : AppColors.grey500,
+                  )),
+            ),
             if (count > 0) ...[
               const SizedBox(width: 6),
               Text('($count)',
@@ -430,56 +461,38 @@ class _ServiceCard extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
+                      child: OutlinedButton.icon(
                         onPressed: () =>
                             context.go(RouteNames.editServicePath(service.id)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.grey100,
-                          foregroundColor: AppColors.primary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                        icon: Icon(
+                          service.isActive
+                              ? Icons.edit_outlined
+                              : Icons.check_circle_outline,
+                          size: 15,
                         ),
-                        child: Text(service.isActive ? 'Edit' : 'Activate',
+                        label: Text(service.isActive ? 'Edit' : 'Activate',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             )),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppColors.white,
+                          foregroundColor: AppColors.secondary,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                            width: 34, height: 34),
-                        style: IconButton.styleFrom(
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          padding: EdgeInsets.zero,
-                        ),
-                        onPressed: () => _toggleActive(context, ref),
-                        icon: Container(
-                          decoration: BoxDecoration(
-                            color: service.isActive
-                                ? const Color(0xFFFEE2E2)
-                                : AppColors.primary.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            service.isActive
-                                ? Icons.block
-                                : Icons.check_circle_outline,
-                            size: 16,
-                            color: service.isActive
-                                ? AppColors.error
-                                : AppColors.primary,
-                          ),
-                        ),
+                    if (service.isActive)
+                      IconButton(
+                        onPressed: () => _confirmDeactivate(context, ref),
+                        icon: const Icon(Icons.block_outlined, size: 18),
+                        color: Colors.redAccent,
+                        tooltip: 'Deactivate',
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -490,15 +503,33 @@ class _ServiceCard extends ConsumerWidget {
     );
   }
 
-  void _toggleActive(BuildContext context, WidgetRef ref) {
-    if (service.isActive) {
-      ref.read(serviceActionProvider.notifier).deactivateService(
-            serviceId: service.id,
-            providerId: providerId,
-          );
-    } else {
-      context.go(RouteNames.editServicePath(service.id));
-    }
+  Future<void> _confirmDeactivate(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deactivate Service?'),
+        content: Text(
+          '"${service.title}" will be hidden from customers and removed from search results.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await ref.read(serviceActionProvider.notifier).deactivateService(
+          serviceId: service.id,
+          providerId: providerId,
+        );
+    ref.invalidate(providerServicesProvider(providerId));
   }
 
   String _categoryLabel(Object category) {

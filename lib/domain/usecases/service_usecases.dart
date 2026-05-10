@@ -114,6 +114,7 @@ class UpdateServiceUseCase {
     try {
       final updated = await ServiceRepository.instance.updateService(
         serviceId: service.id,
+        providerId: service.providerId,
         title: service.title,
         description: service.description,
         category: service.category,

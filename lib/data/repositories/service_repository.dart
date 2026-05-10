@@ -281,9 +281,12 @@ class ServiceRepository {
     }
   }
 
-  /// Updates an existing service listing
+  /// Updates an existing service listing.
+  /// Pass [imageUrls] for existing remote URLs to keep.
+  /// Pass [imageFiles] for newly picked local files to upload and append.
   Future<ServiceModel> updateService({
     required String serviceId,
+    required String providerId,
     String? title,
     String? description,
     ServiceCategory? category,
@@ -291,10 +294,22 @@ class ServiceRepository {
     double? price,
     List<String>? availableDays,
     List<String>? imageUrls,
+    List<XFile>? imageFiles,
     bool? isActive,
     bool? isDraft,
   }) async {
     try {
+      // Upload new image files and merge with kept existing URLs
+      List<String>? finalImageUrls = imageUrls;
+      if (imageFiles != null && imageFiles.isNotEmpty) {
+        final uploadedUrls = await _storage.uploadServiceImages(
+          userId: providerId,
+          serviceId: serviceId,
+          imageFiles: imageFiles,
+        );
+        finalImageUrls = [...(imageUrls ?? []), ...uploadedUrls];
+      }
+
       final updates = <String, dynamic>{};
       if (title != null) updates['title'] = title;
       if (description != null) updates['description'] = description;
@@ -302,7 +317,7 @@ class ServiceRepository {
       if (priceType != null) updates['price_type'] = priceType.value;
       if (price != null) updates['price'] = price;
       if (availableDays != null) updates['available_days'] = availableDays;
-      if (imageUrls != null) updates['image_urls'] = imageUrls;
+      if (finalImageUrls != null) updates['image_urls'] = finalImageUrls;
       if (isActive != null) updates['is_active'] = isActive;
       if (isDraft != null) updates['is_draft'] = isDraft;
 
