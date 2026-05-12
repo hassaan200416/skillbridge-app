@@ -1,21 +1,11 @@
-
-// ---------------------------------------------------------------------------
-// app_router.dart
+// Central navigation map for the app.
+// This file decides which screen opens for each route, which users are allowed
+// to stay on a page, and when the app should switch between customer,
+// provider, and admin shells.
 //
-// Purpose: Complete go_router navigation configuration for SkillBridge.
-//
-// Responsibilities:
-//   - Define all 28 routes
-//   - Role-based redirect guards (customer/provider/admin see different screens)
-//   - Auth guard (unauthenticated users go to login)
-//   - Suspension guard (suspended users are logged out)
-//
-// Architecture:
-//   - Router is a Riverpod provider so it can read auth state
-//   - Redirects react to authStateProvider changes
-//   - ShellRoute provides bottom navigation for each role
-//
-// ---------------------------------------------------------------------------
+// The redirect logic is the real gatekeeper. It keeps unauthenticated users on
+// auth screens, sends logged-in users to the correct home screen, and blocks
+// users from opening pages that do not match their role.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,17 +57,20 @@ import '../../presentation/widgets/common/app_sidebar.dart';
 import '../../presentation/widgets/common/app_top_bar.dart';
 import 'route_names.dart';
 
-// Navigator keys for shell routes — prevents GlobalKey conflicts
-// when transitioning between shell and standalone routes
+// Separate navigator keys keep each shell independent.
+// This avoids route history conflicts between the role shells and standalone
+// detail screens.
 final _customerShellKey =
     GlobalKey<NavigatorState>(debugLabel: 'customerShell');
 final _providerShellKey =
     GlobalKey<NavigatorState>(debugLabel: 'providerShell');
 final _adminShellKey = GlobalKey<NavigatorState>(debugLabel: 'adminShell');
 
-/// The router provider — reads auth state for redirects
+/// Router provider used by MaterialApp.router.
+/// It listens to auth state and rebuilds redirects whenever login status or
+/// the loaded user profile changes.
 final routerProvider = Provider<GoRouter>((ref) {
-  // Listen to auth state for router refresh
+  // The notifier triggers redirect evaluation whenever auth changes.
   final authNotifier = RouterNotifier(ref);
 
   return GoRouter(
@@ -115,7 +108,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileSetupScreen(),
       ),
 
-      // ── Customer Shell ───────────────────────────────────────────────────
+      // Customer shell contains the role's main navigation routes.
       ShellRoute(
         navigatorKey: _customerShellKey,
         builder: (context, state, child) => CustomerShell(child: child),
@@ -166,7 +159,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ── Customer Detail Routes (no bottom nav) ───────────────────────────
+      // Detail routes open without the bottom nav so the content gets full
+      // screen space.
       GoRoute(
         path: RouteNames.addService,
         name: 'add-service',
@@ -229,7 +223,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           conversationId: state.pathParameters['id']!,
         ),
       ),
-      // ── Provider Shell ───────────────────────────────────────────────────
+      // Provider shell mirrors the customer shell with provider-specific tabs.
       ShellRoute(
         navigatorKey: _providerShellKey,
         builder: (context, state, child) => ProviderShell(child: child),
@@ -269,7 +263,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ── Provider Detail Routes (no bottom nav) ───────────────────────────
+      // Provider detail routes are also outside the shell chrome.
       GoRoute(
         path: '/provider-booking/:id',
         name: 'provider-booking-detail',
@@ -300,7 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProviderProfileEditScreen(),
       ),
 
-      // ── Admin Shell ──────────────────────────────────────────────────────
+      // Admin shell groups the admin dashboard and moderation tools.
       ShellRoute(
         navigatorKey: _adminShellKey,
         builder: (context, state, child) => AdminShell(child: child),
@@ -362,7 +356,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ── Admin Detail Routes (no bottom nav) ──────────────────────────────
+      // Admin detail routes open full screen without shell chrome.
       GoRoute(
         path: '/admin/user/:id',
         name: 'admin-user-detail',
@@ -376,7 +370,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 // ── Router Notifier ────────────────────────────────────────────────────────
 
-/// Listens to auth state changes and notifies the router to re-evaluate redirects
+/// Listens to auth and profile state, then asks the router to re-check the
+/// current route.
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen(authStateProvider, (_, __) => notifyListeners());
@@ -390,7 +385,7 @@ class RouterNotifier extends ChangeNotifier {
     final currentUser = _ref.read(currentUserProvider);
     final location = state.matchedLocation;
 
-    // While auth is loading, stay on splash
+    // Keep the splash screen visible while auth state is still loading.
     if (authState.isLoading) {
       if (location != RouteNames.splash) return RouteNames.splash;
       return null;
@@ -398,14 +393,14 @@ class RouterNotifier extends ChangeNotifier {
 
     final isLoggedIn = authState.valueOrNull?.session != null;
 
-    // Auth routes: login, register, verify, profile-setup
+    // These screens are allowed even before login completes.
     final isAuthRoute = location == RouteNames.login ||
         location == RouteNames.register ||
         location == RouteNames.verifyEmail ||
         location == RouteNames.profileSetup ||
         location == RouteNames.splash;
 
-    // Not logged in — redirect to login
+    // Logged out users should not enter the app shells.
     if (!isLoggedIn) {
       if (!isAuthRoute) {
         return RouteNames.login;
@@ -413,20 +408,20 @@ class RouterNotifier extends ChangeNotifier {
       return null;
     }
 
-    // Logged in but no user profile loaded yet
+    // Session exists, but the profile has not been loaded yet.
     if (isLoggedIn && currentUser == null) {
       if (location != RouteNames.splash) return RouteNames.splash;
       return null;
     }
 
-    // Logged in with profile
+    // Once the profile is available, route users according to role.
     if (currentUser != null) {
-      // If on auth route, redirect to role-appropriate home
+      // Auth screens no longer make sense once the user is inside the app.
       if (isAuthRoute) {
         return _getRoleHome(currentUser.role);
       }
 
-      // Enforce role-based access
+      // Block cross-role navigation so each role only sees its own area.
       final isCustomerRoute = location.startsWith('/home') ||
           location.startsWith('/search') ||
           location.startsWith('/service') ||
@@ -456,7 +451,7 @@ class RouterNotifier extends ChangeNotifier {
         return _getRoleHome(currentUser.role);
       }
       if (isCustomerRoute && currentUser.role == UserRole.provider) {
-        // Providers can view service/provider detail pages
+        // Providers can still open public service and provider detail pages.
         final isViewOnly = location.startsWith('/service/') ||
             location.startsWith('/provider/');
         if (!isViewOnly) {
@@ -482,7 +477,7 @@ class RouterNotifier extends ChangeNotifier {
 
 // ── Shell Widgets ──────────────────────────────────────────────────────────
 
-/// Unified shell for customer role — sidebar on web, bottom nav on mobile.
+/// Customer shell switches between sidebar and bottom navigation based on width.
 class CustomerShell extends ConsumerWidget {
   const CustomerShell({super.key, required this.child});
   final Widget child;
@@ -658,7 +653,7 @@ class _CustomerBottomNav extends ConsumerWidget {
   }
 }
 
-/// Unified shell for provider role — sidebar on web, bottom nav on mobile.
+/// Provider shell switches between sidebar and bottom navigation based on width.
 class ProviderShell extends ConsumerWidget {
   const ProviderShell({super.key, required this.child});
   final Widget child;

@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------
 // auth_repository.dart
 //
@@ -234,7 +233,8 @@ class AuthRepository {
       if (phone != null) updates['phone'] = phone;
       if (city != null) updates['city'] = city;
       if (bio != null) updates['bio'] = bio;
-      if (experienceYears != null) updates['experience_years'] = experienceYears;
+      if (experienceYears != null)
+        updates['experience_years'] = experienceYears;
       if (serviceArea != null) updates['service_area'] = serviceArea;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
 
@@ -269,9 +269,9 @@ class AuthRepository {
       // Fallback: fetch current urls and append manually
       final user = await _getUserById(userId);
       final updatedUrls = [...user.portfolioUrls, imageUrl];
-      await _supabase.from('users')
-          .update({'portfolio_urls': updatedUrls})
-          .eq('id', userId);
+      await _supabase
+          .from('users')
+          .update({'portfolio_urls': updatedUrls}).eq('id', userId);
       return await _getUserById(userId);
     }
   }
@@ -303,9 +303,9 @@ class AuthRepository {
     required bool isVerified,
   }) async {
     try {
-      await _supabase.from('users')
-          .update({'is_verified': isVerified})
-          .eq('id', targetUserId);
+      await _supabase
+          .from('users')
+          .update({'is_verified': isVerified}).eq('id', targetUserId);
       return await _getUserById(targetUserId);
     } catch (e) {
       throw ServerFailure('Failed to update verified status: $e');
@@ -318,9 +318,9 @@ class AuthRepository {
     required UserRole newRole,
   }) async {
     try {
-      await _supabase.from('users')
-          .update({'role': newRole.value})
-          .eq('id', targetUserId);
+      await _supabase
+          .from('users')
+          .update({'role': newRole.value}).eq('id', targetUserId);
       return await _getUserById(targetUserId);
     } catch (e) {
       throw ServerFailure('Failed to update role: $e');
@@ -336,7 +336,8 @@ class AuthRepository {
     int pageSize = 20,
   }) async {
     try {
-      var query = _supabase.from('users')
+      var query = _supabase
+          .from('users')
           .select()
           .order('created_at', ascending: false)
           .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -345,20 +346,19 @@ class AuthRepository {
       return data
           .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
           .where((user) {
-            if (searchQuery != null && searchQuery.isNotEmpty) {
-              final q = searchQuery.toLowerCase();
-              if (!user.name.toLowerCase().contains(q) &&
-                  !user.email.toLowerCase().contains(q)) {
-                return false;
-              }
-            }
-            if (roleFilter != null && user.role != roleFilter) return false;
-            if (suspendedFilter != null && user.isSuspended != suspendedFilter) {
-              return false;
-            }
-            return true;
-          })
-          .toList();
+        if (searchQuery != null && searchQuery.isNotEmpty) {
+          final q = searchQuery.toLowerCase();
+          if (!user.name.toLowerCase().contains(q) &&
+              !user.email.toLowerCase().contains(q)) {
+            return false;
+          }
+        }
+        if (roleFilter != null && user.role != roleFilter) return false;
+        if (suspendedFilter != null && user.isSuspended != suspendedFilter) {
+          return false;
+        }
+        return true;
+      }).toList();
     } catch (e) {
       throw ServerFailure('Failed to fetch users: $e');
     }
@@ -369,10 +369,8 @@ class AuthRepository {
   /// Fetches a user profile by ID from public.users
   Future<UserModel> _getUserById(String userId) async {
     try {
-      final data = await _supabase.from('users')
-          .select()
-          .eq('id', userId)
-          .single();
+      final data =
+          await _supabase.from('users').select().eq('id', userId).single();
       return UserModel.fromJson(Map<String, dynamic>.from(data));
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {

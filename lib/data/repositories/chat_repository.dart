@@ -1,9 +1,6 @@
-// ---------------------------------------------------------------------------
-// chat_repository.dart
-//
-// Purpose: Chat system CRUD — conversations and messages.
-//
-// ---------------------------------------------------------------------------
+// Chat repository for conversations and messages.
+// This repository creates or loads chat threads, stores message history,
+// tracks read state, and exposes the real-time stream used by the chat UI.
 
 import '../../core/errors/failures.dart';
 import '../../services/supabase_service.dart';
@@ -17,7 +14,7 @@ class ChatRepository {
 
   // ── Conversations ─────────────────────────────────────────────────────
 
-  /// Get all conversations for a user (customer or provider)
+  /// Loads every conversation the user is part of.
   Future<List<ConversationModel>> getConversations(String userId) async {
     try {
       final data = await _supabase
@@ -39,14 +36,14 @@ class ChatRepository {
     }
   }
 
-  /// Get or create a conversation between customer and provider
+  /// Finds an existing conversation or creates a new one for the pair.
   Future<ConversationModel> getOrCreateConversation({
     required String customerId,
     required String providerId,
     String? serviceId,
   }) async {
     try {
-      // Check if conversation already exists
+      // Reuse the existing thread when the same two users have chatted before.
       final existing = await _supabase
           .from('conversations')
           .select('''
@@ -63,7 +60,7 @@ class ChatRepository {
             Map<String, dynamic>.from(existing as Map));
       }
 
-      // Create new conversation
+      // Create a new thread only when there is no previous conversation.
       final inserted = await _supabase.from('conversations').insert({
         'customer_id': customerId,
         'provider_id': providerId,
@@ -81,7 +78,7 @@ class ChatRepository {
     }
   }
 
-  /// Get a single conversation by ID with joined user data
+  /// Loads one conversation together with the linked user display data.
   Future<ConversationModel?> getConversationById(String conversationId) async {
     try {
       final data = await _supabase.from('conversations').select('''
@@ -97,7 +94,7 @@ class ChatRepository {
     }
   }
 
-  /// Delete a conversation and all its messages (CASCADE)
+  /// Deletes a conversation and lets the database cascade its messages.
   Future<void> deleteConversation(String conversationId) async {
     try {
       await _supabase.from('conversations').delete().eq('id', conversationId);
@@ -108,7 +105,7 @@ class ChatRepository {
 
   // ── Messages ──────────────────────────────────────────────────────────
 
-  /// Get messages for a conversation
+  /// Loads message history in chronological order.
   Future<List<MessageModel>> getMessages(
     String conversationId, {
     int limit = 50,
@@ -131,7 +128,7 @@ class ChatRepository {
     }
   }
 
-  /// Send a message
+  /// Inserts one message into the selected conversation.
   Future<MessageModel> sendMessage({
     required String conversationId,
     required String senderId,
@@ -154,7 +151,7 @@ class ChatRepository {
     }
   }
 
-  /// Mark all messages in a conversation as read (for the other party)
+  /// Marks the other person's unread messages as read.
   Future<void> markMessagesAsRead({
     required String conversationId,
     required String currentUserId,
@@ -171,10 +168,10 @@ class ChatRepository {
     }
   }
 
-  /// Get unread message count across all conversations
+  /// Counts unread messages across every conversation for the user.
   Future<int> getUnreadCount(String userId) async {
     try {
-      // Get all conversation IDs for this user
+      // Build the conversation id list first, then count unread messages.
       final convos = await _supabase
           .from('conversations')
           .select('id')
@@ -198,7 +195,7 @@ class ChatRepository {
     }
   }
 
-  /// Real-time stream for messages in a conversation
+  /// Streams message updates for one conversation.
   Stream<List<Map<String, dynamic>>> watchMessages(String conversationId) {
     return _supabase.client
         .from('messages')

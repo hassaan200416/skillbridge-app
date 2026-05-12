@@ -1,10 +1,6 @@
-
-// ---------------------------------------------------------------------------
-// review_provider.dart
-//
-// Purpose: Riverpod state management for reviews and ratings.
-//
-// ---------------------------------------------------------------------------
+// Review and rating state for service feedback.
+// This file loads review lists, rating breakdowns, and review-edit state for
+// customer, provider, and admin screens.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/notification_model.dart';
@@ -14,47 +10,48 @@ import '../../data/repositories/review_repository.dart';
 import '../../services/notification_service.dart';
 import '../../core/errors/failures.dart';
 
-// ── Read Providers ────────────────────────────────────────────────────────
+// Read-only review providers.
+// These keep service detail pages and profile pages up to date.
 
-/// Reviews for a service — used on service detail screen
+/// Reviews shown on a service detail page.
 final serviceReviewsProvider =
     FutureProvider.family<List<ReviewModel>, String>((ref, serviceId) {
   return ReviewRepository.instance.getServiceReviews(serviceId);
 });
 
-/// Rating breakdown for a service {1: count, 2: count, ...}
+/// Counts how many 1-star, 2-star, 3-star, and so on reviews exist.
 final ratingBreakdownProvider =
     FutureProvider.family<Map<int, int>, String>((ref, serviceId) {
   return ReviewRepository.instance.getRatingBreakdown(serviceId);
 });
 
-/// All reviews by a customer
+/// Reviews written by one customer.
 final customerReviewsProvider =
     FutureProvider.family<List<ReviewModel>, String>((ref, customerId) {
   return ReviewRepository.instance.getCustomerReviews(customerId);
 });
 
-/// All reviews for a provider
+/// Reviews received by one provider.
 final providerReviewsProvider =
     FutureProvider.family<List<ReviewModel>, String>((ref, providerId) {
   return ReviewRepository.instance.getProviderReviews(providerId);
 });
 
-/// Whether a specific booking already has a review
-final hasReviewProvider =
-    FutureProvider.family<bool, String>((ref, bookingId) {
+/// Checks whether a booking already has a review.
+final hasReviewProvider = FutureProvider.family<bool, String>((ref, bookingId) {
   return ReviewRepository.instance.hasReviewForBooking(bookingId);
 });
 
-/// Get existing review for a booking (for edit flow)
+/// Loads an existing review so the user can edit it.
 final bookingReviewProvider =
     FutureProvider.family<ReviewModel?, String>((ref, bookingId) {
   return ReviewRepository.instance.getReviewByBookingId(bookingId);
 });
 
-// ── Admin Providers ───────────────────────────────────────────────────────
+// Admin review providers.
+// Used on moderation screens for broad review management.
 
-/// All reviews for admin moderation
+/// Loads every review for moderation.
 final allReviewsProvider = FutureProvider<List<ReviewModel>>((ref) {
   return ReviewRepository.instance.getAllReviews();
 });
@@ -63,7 +60,8 @@ final flaggedReviewsProvider = FutureProvider<List<ReviewModel>>((ref) {
   return ReviewRepository.instance.getAllReviews(flaggedOnly: true);
 });
 
-// ── Review Actions ────────────────────────────────────────────────────────
+// Review actions.
+// These methods create, edit, or delete reviews and refresh related counts.
 
 class ReviewActionState {
   final bool isLoading;
@@ -119,13 +117,13 @@ class ReviewActionNotifier extends StateNotifier<ReviewActionState> {
         rating: rating,
         comment: comment,
       );
-      // Notify provider about new review
+      // Tell the provider that a new review was received.
       await _notifications.onReviewReceived(
         providerId: providerId,
         bookingId: bookingId,
         serviceName: serviceName,
       );
-      // Invalidate related providers
+      // Refresh all review-related screens so the new score appears quickly.
       _ref.invalidate(serviceReviewsProvider(serviceId));
       _ref.invalidate(ratingBreakdownProvider(serviceId));
       _ref.invalidate(providerReviewsProvider(providerId));
@@ -203,6 +201,7 @@ class ReviewActionNotifier extends StateNotifier<ReviewActionState> {
     }
   }
 
+  // Resets loading, error, and result values.
   void clearState() => state = const ReviewActionState();
 }
 

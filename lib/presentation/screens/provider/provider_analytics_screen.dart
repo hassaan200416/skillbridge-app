@@ -1,11 +1,10 @@
-
-// ---------------------------------------------------------------------------
-// provider_analytics_screen.dart
+// Provider analytics dashboard.
+// This screen turns bookings, reviews, and services into simple business
+// summaries so providers can see revenue, completion rate, ratings, and which
+// services are performing best.
 //
-// Purpose: Provider performance analytics — metrics, earnings line chart
-// with time filter, bookings donut with hover, top services bar chart.
-//
-// ---------------------------------------------------------------------------
+// The charts below are intentionally split into small widgets so each visual
+// piece can explain one part of the business story.
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -104,18 +103,21 @@ class _MetricCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only completed bookings count as earned revenue.
     final completed =
         bookings.where((b) => b.status == BookingStatus.completed).toList();
     final totalRevenue =
         completed.fold<double>(0, (sum, b) => sum + b.priceAtBooking);
     final completedCount = completed.length;
 
+    // Average rating is derived from the provider's review list.
     double avgRating = 0;
     if (reviews.isNotEmpty) {
       final total = reviews.fold<int>(0, (sum, r) => sum + (r.rating as int));
       avgRating = total / reviews.length;
     }
 
+    // Completion rate shows how many bookings reached the completed state.
     final completionRate =
         bookings.isNotEmpty ? (completedCount / bookings.length * 100) : 0.0;
 
@@ -147,8 +149,9 @@ class _MetricCards extends StatelessWidget {
                     iconBg: const Color(0xFFFEF3C7),
                     iconColor: const Color(0xFFD97706),
                     label: 'Avg Rating',
-                    value:
-                        reviews.isEmpty ? 'N/A' : avgRating.toStringAsFixed(1))),
+                    value: reviews.isEmpty
+                        ? 'N/A'
+                        : avgRating.toStringAsFixed(1))),
           ]),
           const SizedBox(height: 12),
           _Metric(
@@ -267,26 +270,28 @@ class _EarningsChartState extends State<_EarningsChart> {
 
   @override
   Widget build(BuildContext context) {
+    // Build the chart only from completed bookings because that is real income.
     final completed = widget.bookings
         .where((b) => b.status == BookingStatus.completed)
         .toList();
 
     final now = DateTime.now();
 
-    // For 1M: show daily data for last 30 days
-    // For 6M/12M: show monthly data
+    // For 1 month, show daily points.
+    // For longer ranges, combine bookings by month.
     final bool isDaily = _months == 1;
 
     List<FlSpot> spots;
     List<DateTime> sortedKeys;
 
     if (isDaily) {
-      // Daily grouping for last 30 days
+      // Create one bucket per day for the last 30 days.
       final dailyData = <DateTime, double>{};
       for (int i = 29; i >= 0; i--) {
         final day = DateTime(now.year, now.month, now.day - i);
         dailyData[day] = 0;
       }
+      // Add each completed booking into the matching day bucket.
       for (final b in completed) {
         final key = DateTime(
             b.bookingDate.year, b.bookingDate.month, b.bookingDate.day);
@@ -300,13 +305,14 @@ class _EarningsChartState extends State<_EarningsChart> {
         spots.add(FlSpot(i.toDouble(), dailyData[sortedKeys[i]]!));
       }
     } else {
-      // Monthly grouping
+      // Create one bucket per month in the selected range.
       final cutoff = DateTime(now.year, now.month - _months + 1, 1);
       final monthlyData = <DateTime, double>{};
       for (int i = 0; i < _months; i++) {
         final month = DateTime(now.year, now.month - (_months - 1 - i), 1);
         monthlyData[month] = 0;
       }
+      // Sum all completed booking values into the correct month.
       for (final b in completed) {
         if (b.bookingDate.isAfter(cutoff) ||
             b.bookingDate.isAtSameMomentAs(cutoff)) {
@@ -565,6 +571,7 @@ class _BookingsDonutState extends State<_BookingsDonut> {
 
   @override
   Widget build(BuildContext context) {
+    // Split bookings by status so the donut shows the current mix of work.
     final total = widget.bookings.length;
     final completed = widget.bookings
         .where((b) => b.status == BookingStatus.completed)

@@ -1,20 +1,10 @@
-
-// ---------------------------------------------------------------------------
-// notification_service.dart
+// Notification sending helper for booking and review events.
+// This service turns booking and review changes into the correct in-app
+// notification records. Screens never call the repository directly for these
+// flows; they call this service so the business rules stay in one place.
 //
-// Purpose: Coordinates sending in-app notifications when booking
-// status changes. Acts as the glue between repositories.
-//
-// This service is called by the booking providers after status updates.
-// It determines who to notify and what message to send.
-//
-// Architecture note: Direct DB inserts are admin-only via RLS.
-// For a production app, this logic would live in a Supabase Edge Function.
-// For this project, the admin-logged-in user can send — or we use
-// the Supabase service role key in an Edge Function.
-// We gracefully skip notification creation if RLS blocks it.
-//
-// ---------------------------------------------------------------------------
+// If notification creation fails, the booking or review action still succeeds.
+// That keeps notifications helpful without making them a hard dependency.
 
 import '../data/models/notification_model.dart';
 import '../data/repositories/notification_repository.dart';
@@ -25,8 +15,7 @@ class NotificationService {
 
   final _repo = NotificationRepository.instance;
 
-  /// Sends notification when a new booking is created
-  /// Notifies: the provider
+  /// Tells the provider that a customer has created a new booking request.
   Future<void> onBookingCreated({
     required String providerId,
     required String bookingId,
@@ -44,8 +33,7 @@ class NotificationService {
     }
   }
 
-  /// Sends notification when provider confirms a booking
-  /// Notifies: the customer
+  /// Tells the customer that the provider confirmed the booking.
   Future<void> onBookingConfirmed({
     required String customerId,
     required String bookingId,
@@ -61,8 +49,7 @@ class NotificationService {
     } catch (_) {}
   }
 
-  /// Sends notification when provider rejects a booking
-  /// Notifies: the customer
+  /// Tells the customer that the provider rejected the booking.
   Future<void> onBookingRejected({
     required String customerId,
     required String bookingId,
@@ -78,8 +65,7 @@ class NotificationService {
     } catch (_) {}
   }
 
-  /// Sends notification when booking is marked complete
-  /// Notifies: the customer (prompts them to review)
+  /// Tells the customer that the booking is complete and ready for review.
   Future<void> onBookingCompleted({
     required String customerId,
     required String bookingId,
@@ -95,8 +81,7 @@ class NotificationService {
     } catch (_) {}
   }
 
-  /// Sends notification when a booking is cancelled
-  /// Notifies: the other party (whoever did NOT cancel)
+  /// Tells the other party that a booking was cancelled.
   Future<void> onBookingCancelled({
     required String recipientId,
     required String bookingId,
@@ -112,7 +97,7 @@ class NotificationService {
     } catch (_) {}
   }
 
-  /// Sends notification when provider receives a review
+  /// Tells the provider that a customer left a review.
   Future<void> onReviewReceived({
     required String providerId,
     required String bookingId,

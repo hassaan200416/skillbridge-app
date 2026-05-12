@@ -1,3 +1,6 @@
+// Provider SkillBot launcher and chat panel.
+// Adds a floating help chat for service providers on top of their screens.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +9,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/chat_message_model.dart';
 import '../../providers/provider_skillbot_provider.dart';
 
-/// Wrap any Provider screen's body with this widget to inject the Provider SkillBot.
+/// Wrap a provider screen body with this widget to show the provider help chat.
 class ProviderSkillBotWidget extends StatefulWidget {
   const ProviderSkillBotWidget({super.key, required this.child});
   final Widget child;

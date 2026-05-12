@@ -1,6 +1,6 @@
-
-// service_image_carousel.dart
-// Full-featured image carousel for service detail screens.
+// Image carousel for service detail pages.
+// Shows one or more service photos with swipe navigation, loading states, and
+// a fallback placeholder when no images are available.
 
 import 'package:flutter/material.dart';
 
@@ -26,6 +26,7 @@ class ServiceImageCarousel extends StatefulWidget {
 }
 
 class _ServiceImageCarouselState extends State<ServiceImageCarousel> {
+  // Keeps the carousel on the current image.
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
@@ -37,7 +38,9 @@ class _ServiceImageCarouselState extends State<ServiceImageCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.imageUrls.isEmpty) return _PlaceholderImage(height: widget.height);
+    // If no photos exist, show a neutral empty state instead of a blank box.
+    if (widget.imageUrls.isEmpty)
+      return _PlaceholderImage(height: widget.height);
 
     return Stack(
       alignment: Alignment.bottomCenter,
@@ -54,7 +57,9 @@ class _ServiceImageCarouselState extends State<ServiceImageCarousel> {
                   ? '${widget.heroTagPrefix}_img_$index'
                   : null;
               return GestureDetector(
-                onTap: widget.onImageTap != null ? () => widget.onImageTap!(index) : null,
+                onTap: widget.onImageTap != null
+                    ? () => widget.onImageTap!(index)
+                    : null,
                 child: heroTag != null
                     ? Hero(tag: heroTag, child: _CarouselImage(url: url))
                     : _CarouselImage(url: url),
@@ -97,6 +102,7 @@ class _CarouselImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Network image with loading and error fallback so the layout stays stable.
     return Image.network(
       url,
       fit: BoxFit.cover,
@@ -108,7 +114,8 @@ class _CarouselImage extends StatelessWidget {
           child: Center(
             child: CircularProgressIndicator(
               value: progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                  ? progress.cumulativeBytesLoaded /
+                      progress.expectedTotalBytes!
                   : null,
               color: AppColors.primary,
               strokeWidth: 2,
@@ -121,7 +128,8 @@ class _CarouselImage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.broken_image_outlined, size: 40, color: AppColors.grey400),
+            const Icon(Icons.broken_image_outlined,
+                size: 40, color: AppColors.grey400),
             const SizedBox(height: 8),
             Text(
               'Image unavailable',
@@ -145,6 +153,7 @@ class _DotIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Small animated dots show which photo is active.
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(count, (index) {
@@ -156,7 +165,9 @@ class _DotIndicator extends StatelessWidget {
           width: isActive ? 20 : 6,
           height: 6,
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : Colors.white.withValues(alpha: 0.65),
+            color: isActive
+                ? AppColors.primary
+                : Colors.white.withValues(alpha: 0.65),
             borderRadius: BorderRadius.circular(3),
             boxShadow: [
               BoxShadow(
@@ -177,6 +188,7 @@ class _PlaceholderImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Friendly fallback when a service has no gallery images.
     return Container(
       height: height,
       width: double.infinity,
@@ -199,4 +211,3 @@ class _PlaceholderImage extends StatelessWidget {
     );
   }
 }
-

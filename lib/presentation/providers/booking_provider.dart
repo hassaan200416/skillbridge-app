@@ -1,11 +1,10 @@
-
-// ---------------------------------------------------------------------------
-// booking_provider.dart
+// Booking state and actions for customers, providers, and admins.
+// This file connects the UI to the booking repository, keeps lists of
+// bookings up to date, and triggers notification updates after booking
+// actions such as create, cancel, accept, or reject.
 //
-// Purpose: Riverpod state management for bookings.
-// Drives booking creation, status updates, and real-time tracking.
-//
-// ---------------------------------------------------------------------------
+// It does not store data itself. It only exposes Riverpod providers and a
+// small action state so screens can react to loading, success, and errors.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/booking_model.dart';
@@ -14,7 +13,9 @@ import '../../data/repositories/booking_repository.dart';
 import '../../services/notification_service.dart';
 import '../../core/errors/failures.dart';
 
-// ── Customer Booking Providers ────────────────────────────────────────────
+// Customer booking queries.
+// These providers load the customer booking list and let screens filter it by
+// status without repeating repository calls in the UI.
 
 /// All bookings for a customer
 final customerBookingsProvider =
@@ -25,16 +26,17 @@ final customerBookingsProvider =
 });
 
 /// Customer bookings filtered by status
-final customerBookingsByStatusProvider =
-    FutureProvider.family<List<BookingModel>, ({String customerId, BookingStatus status})>(
-        (ref, args) {
+final customerBookingsByStatusProvider = FutureProvider.family<
+    List<BookingModel>,
+    ({String customerId, BookingStatus status})>((ref, args) {
   return BookingRepository.instance.getCustomerBookings(
     customerId: args.customerId,
     statusFilter: args.status,
   );
 });
 
-// ── Provider Booking Providers ────────────────────────────────────────────
+// Provider booking queries.
+// These providers feed provider dashboards and booking management screens.
 
 /// All bookings for a provider
 final providerBookingsProvider =
@@ -45,9 +47,9 @@ final providerBookingsProvider =
 });
 
 /// Provider bookings filtered by status
-final providerBookingsByStatusProvider =
-    FutureProvider.family<List<BookingModel>, ({String providerId, BookingStatus status})>(
-        (ref, args) {
+final providerBookingsByStatusProvider = FutureProvider.family<
+    List<BookingModel>,
+    ({String providerId, BookingStatus status})>((ref, args) {
   return BookingRepository.instance.getProviderBookings(
     providerId: args.providerId,
     statusFilter: args.status,
@@ -55,6 +57,7 @@ final providerBookingsByStatusProvider =
 });
 
 class AvailableSlotsParams {
+  // Input bundle for loading open time slots on a specific day.
   const AvailableSlotsParams({
     required this.serviceId,
     required this.date,
@@ -64,22 +67,25 @@ class AvailableSlotsParams {
   final DateTime date;
 }
 
-final availableSlotsProvider = FutureProvider.family<List<TimeSlotModel>,
-    AvailableSlotsParams>((ref, params) {
+final availableSlotsProvider =
+    FutureProvider.family<List<TimeSlotModel>, AvailableSlotsParams>(
+        (ref, params) {
   return BookingRepository.instance.getAvailableSlots(
     params.serviceId,
     params.date,
   );
 });
 
-// ── Single Booking ────────────────────────────────────────────────────────
+// Single booking detail lookup.
+// Used by detail screens when the user opens one booking card.
 
 final bookingDetailProvider =
     FutureProvider.family<BookingModel, String>((ref, bookingId) {
   return BookingRepository.instance.getBookingById(bookingId);
 });
 
-// ── Real-time Streams ─────────────────────────────────────────────────────
+// Real-time booking streams.
+// These streams keep booking screens in sync when the backend changes.
 
 /// Real-time stream of customer bookings — drives live status updates
 final customerBookingsStreamProvider =
@@ -103,6 +109,7 @@ final getAllBookingsProvider = FutureProvider<List<BookingModel>>((ref) {
 // ── Booking Actions ───────────────────────────────────────────────────────
 
 class BookingActionState {
+  // Tracks the result of one booking action, such as create or cancel.
   final bool isLoading;
   final Failure? error;
   final BookingModel? result;
@@ -137,6 +144,7 @@ class BookingActionNotifier extends StateNotifier<BookingActionState> {
   final _repo = BookingRepository.instance;
   final _notifications = NotificationService.instance;
 
+  // Creates a booking and refreshes the customer list after success.
   Future<bool> createBooking({
     required String serviceId,
     required String customerId,
@@ -158,7 +166,7 @@ class BookingActionNotifier extends StateNotifier<BookingActionState> {
         servicePrice: servicePrice,
         note: note,
       );
-      // Notify provider
+      // Tell the provider that a new booking request has arrived.
       await _notifications.onBookingCreated(
         providerId: providerId,
         bookingId: booking.id,
@@ -176,6 +184,7 @@ class BookingActionNotifier extends StateNotifier<BookingActionState> {
     }
   }
 
+  // Cancels a pending booking and notifies the provider.
   Future<bool> cancelBooking({
     required String bookingId,
     required String customerId,
@@ -203,6 +212,7 @@ class BookingActionNotifier extends StateNotifier<BookingActionState> {
     }
   }
 
+  // Confirms a booking from the provider side.
   Future<bool> acceptBooking({
     required String bookingId,
     required String customerId,
@@ -230,6 +240,7 @@ class BookingActionNotifier extends StateNotifier<BookingActionState> {
     }
   }
 
+  // Rejects a booking request and optionally stores the reason.
   Future<bool> rejectBooking({
     required String bookingId,
     required String customerId,

@@ -1,10 +1,9 @@
-// ---------------------------------------------------------------------------
-// search_screen.dart
+// Service discovery screen.
+// This page lets customers search for services with either plain text or AI
+// help, then filters the catalog by category, price, and rating.
 //
-// Purpose: Service discovery with AI-powered search, category filter
-// chips, and 4-column service grid. Web layout: sidebar + main content.
-//
-// ---------------------------------------------------------------------------
+// The screen also keeps the route query in sync with the search bar so people
+// can share or revisit the same search later.
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -104,21 +103,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       });
     }
     try {
+      // Ask the AI to pull a category and price out of the user's sentence.
       final extraction =
           await AiService.instance.extractSearchParameters(query);
       if (mounted) {
-        // If AI detected a category, use category filter only
-        // (don't combine with text query — ILIKE phrase matching
-        // is too strict and returns no results)
-        // Only use text query if no category was detected
+        // If AI detected a category, use category filter only.
+        // Mixing a category with the original text query is too strict and can
+        // hide valid services.
         ServiceCategory? detectedCategory = extraction.category != null
             ? ServiceCategoryExtension.fromString(extraction.category!)
             : null;
 
-        // Fallback: if AI didn't detect a category, try matching
-        // the original query against category names locally
+        // If AI did not name a category, try a simple local keyword match.
         detectedCategory ??= _tryMatchCategory(query);
 
+        // Save the clean search state so the results list can rebuild.
         ref.read(searchParamsProvider.notifier).state = SearchParams(
           query: detectedCategory != null ? '' : extraction.cleanQuery,
           category: detectedCategory,
@@ -131,6 +130,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       }
     } catch (_) {
       if (mounted) {
+        // Fall back to plain text search if AI parsing fails.
         ref.read(searchParamsProvider.notifier).state =
             SearchParams(query: query);
       }
@@ -141,7 +141,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  /// Local fallback: try to match query text against category names
+  /// Local fallback: tries to map common words to a category.
+  /// This gives the user a useful result even when AI does not match exactly.
   ServiceCategory? _tryMatchCategory(String query) {
     final q = query.toLowerCase();
     const categoryKeywords = {
@@ -188,6 +189,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _openFilters(SearchParams current) async {
+    // Use local temporary values so the user can preview changes before apply.
     String sortBy = current.sortBy;
     double? maxPrice = current.maxPrice;
     double? minRating = current.minRating;
@@ -233,14 +235,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'rating', child: Text('Top rated')),
+                      DropdownMenuItem(
+                          value: 'rating', child: Text('Top rated')),
                       DropdownMenuItem(
                           value: 'price_low_to_high',
                           child: Text('Price: Low to high')),
                       DropdownMenuItem(
                           value: 'price_high_to_low',
                           child: Text('Price: High to low')),
-                      DropdownMenuItem(value: 'newest', child: Text('Newest first')),
+                      DropdownMenuItem(
+                          value: 'newest', child: Text('Newest first')),
                     ],
                     onChanged: (v) {
                       if (v != null) setLocal(() => sortBy = v);
@@ -276,8 +280,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     min: 0,
                     max: 5,
                     divisions: 10,
-                    label: minRating == null ? 'Any' : minRating!.toStringAsFixed(1),
-                    onChanged: (v) => setLocal(() => minRating = v == 0 ? null : v),
+                    label: minRating == null
+                        ? 'Any'
+                        : minRating!.toStringAsFixed(1),
+                    onChanged: (v) =>
+                        setLocal(() => minRating = v == 0 ? null : v),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -470,8 +477,8 @@ class _AiBanner extends StatelessWidget {
                     backgroundColor: const Color(0xFF2D2D2D),
                     foregroundColor: Colors.white,
                     minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                     elevation: 0,

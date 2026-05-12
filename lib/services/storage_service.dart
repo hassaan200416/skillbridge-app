@@ -1,19 +1,9 @@
-
-// ---------------------------------------------------------------------------
-// storage_service.dart
+// Storage helper for all image upload and delete flows.
+// This service handles the file picker, uploads to Supabase Storage, and
+// turns uploaded files into public URLs that screens can display.
 //
-// Purpose: Handles all file upload/download operations with Supabase Storage.
-// Enforces folder structure: {bucket}/{userId}/{filename}
-// This ensures RLS storage policies work correctly.
-//
-// Responsibilities:
-//   - Upload avatar images
-//   - Upload service images (up to 5 per service)
-//   - Upload portfolio images
-//   - Delete images
-//   - Generate public URLs
-//
-// ---------------------------------------------------------------------------
+// Files are stored in a predictable bucket/user folder structure so storage
+// policies stay simple and user uploads do not collide with one another.
 
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -29,14 +19,14 @@ class StorageService {
   final _supabase = SupabaseService.instance;
   final _picker = ImagePicker();
 
-  // Bucket names matching our SQL schema
+  // Bucket names matching the storage tables and policies.
   static const String _avatarBucket = 'avatars';
   static const String _serviceImageBucket = 'service-images';
   static const String _portfolioBucket = 'portfolio-images';
 
   // ── Image Picking ──────────────────────────────────────────────────────────
 
-  /// Pick a single image from gallery or camera
+  /// Opens the system picker and returns one image.
   Future<XFile?> pickImage({
     ImageSource source = ImageSource.gallery,
     int imageQuality = 85,
@@ -53,7 +43,7 @@ class StorageService {
     }
   }
 
-  /// Pick multiple images from gallery (for service images)
+  /// Opens the gallery picker and returns up to [maxImages] images.
   Future<List<XFile>> pickMultipleImages({
     int maxImages = 5,
     int imageQuality = 85,
@@ -73,10 +63,8 @@ class StorageService {
 
   // ── Upload Operations ──────────────────────────────────────────────────────
 
-  /// Upload user avatar — returns public URL
-  /// Path: avatars/{userId}/avatar_{timestamp}.{ext}
-  /// Using a unique filename avoids storage upsert/update policy conflicts
-  /// on some RLS setups and also prevents stale image cache on web/mobile.
+  /// Uploads a user avatar and returns its public URL.
+  /// The timestamp in the filename prevents caching and overwrite conflicts.
   Future<String> uploadAvatar({
     required String userId,
     required XFile imageFile,
@@ -89,8 +77,7 @@ class StorageService {
     );
   }
 
-  /// Upload a single service image — returns public URL
-  /// Path: service-images/{userId}/{serviceId}_{index}.{ext}
+  /// Uploads one service image and returns its public URL.
   Future<String> uploadServiceImage({
     required String userId,
     required String serviceId,
@@ -104,7 +91,7 @@ class StorageService {
     );
   }
 
-  /// Upload multiple service images — returns list of public URLs
+  /// Uploads several service images one by one and returns all public URLs.
   Future<List<String>> uploadServiceImages({
     required String userId,
     required String serviceId,
@@ -123,8 +110,7 @@ class StorageService {
     return urls;
   }
 
-  /// Upload portfolio image — returns public URL
-  /// Path: portfolio-images/{userId}/{timestamp}.{ext}
+  /// Uploads one portfolio image and returns its public URL.
   Future<String> uploadPortfolioImage({
     required String userId,
     required XFile imageFile,
@@ -139,10 +125,10 @@ class StorageService {
 
   // ── Delete Operations ──────────────────────────────────────────────────────
 
-  /// Delete a file by its public URL
+  /// Deletes a stored file using its public URL.
   Future<void> deleteByUrl(String bucket, String publicUrl) async {
     try {
-      // Extract path from public URL
+      // Pull the storage path out of the public URL.
       final uri = Uri.parse(publicUrl);
       final pathSegments = uri.pathSegments;
       // URL format: .../storage/v1/object/public/{bucket}/{path}
@@ -157,7 +143,7 @@ class StorageService {
 
   // ── Private Helpers ────────────────────────────────────────────────────────
 
-  /// Core upload method — handles both web and mobile
+  /// Shared upload implementation for every image type.
   Future<String> _uploadFile({
     required String bucket,
     required String path,
@@ -168,13 +154,13 @@ class StorageService {
       bytes = await imageFile.readAsBytes();
 
       await _supabase.storage.from(bucket).uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(
-          contentType: _getContentType(imageFile.name),
-          upsert: true, // Overwrite if exists (for avatar updates)
-        ),
-      );
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: _getContentType(imageFile.name),
+              upsert: true, // Replace older files when the same path is reused.
+            ),
+          );
 
       return _supabase.storage.from(bucket).getPublicUrl(path);
     } on StorageException catch (e) {
@@ -184,17 +170,22 @@ class StorageService {
     }
   }
 
+  /// Returns the file extension or falls back to jpg.
   String _getExtension(String filename) {
     final parts = filename.split('.');
     return parts.length > 1 ? parts.last.toLowerCase() : 'jpg';
   }
 
+  /// Maps the file extension to the correct image mime type.
   String _getContentType(String filename) {
     final ext = _getExtension(filename);
     switch (ext) {
-      case 'png':  return 'image/png';
-      case 'webp': return 'image/webp';
-      default:     return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
     }
   }
 }

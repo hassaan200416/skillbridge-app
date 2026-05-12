@@ -1,17 +1,7 @@
-
-// ---------------------------------------------------------------------------
-// service_repository.dart
-//
-// Purpose: All service listing CRUD operations and search/discovery queries.
-//
-// Responsibilities:
-//   - Fetch services for home screen (featured, recent, by category)
-//   - Search with filters (category, price, rating, text)
-//   - Provider CRUD: create, edit, soft-delete services
-//   - Image management via StorageService
-//   - AI summary caching logic
-//
-// ---------------------------------------------------------------------------
+// Service repository for browsing, search, CRUD, and saved services.
+// This repository is the main data layer for service discovery and provider
+// listings. It also handles image upload coordination and AI review summary
+// caching so the UI does not need to manage those workflows itself.
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide StorageException;
@@ -121,18 +111,18 @@ class ServiceRepository {
     int pageSize = 20,
   }) async {
     try {
-      // Build base query with provider join (dynamic: chained filters change builder type)
+      // Build the query step by step because each filter changes the builder type.
       dynamic query = _supabase.from('services').select('''
             *,
             users!provider_id(name, avatar_url, is_verified)
           ''').eq('is_active', true).eq('is_draft', false);
 
-      // Apply category filter
+      // Keep only one category when the user or AI has picked one.
       if (category != null) {
         query = query.eq('category', category.value);
       }
 
-      // Apply price range filter
+      // Narrow results to the requested price range.
       if (minPrice != null) {
         query = query.gte('price', minPrice);
       }
@@ -140,19 +130,18 @@ class ServiceRepository {
         query = query.lte('price', maxPrice);
       }
 
-      // Apply rating filter
+      // Keep only services above the minimum rating.
       if (minRating != null) {
         query = query.gte('avg_rating', minRating);
       }
 
-      // Use ilike for text search — more reliable on Flutter web
-      // than full-text search which causes SSL issues
+      // Use ilike for text search because it works consistently on web.
       if (searchQuery != null && searchQuery.isNotEmpty) {
         query = query
             .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
       }
 
-      // Apply sort
+      // Switch the sort order based on the screen request.
       switch (sortBy) {
         case 'price_asc':
           query = query.order('price', ascending: true);
@@ -166,7 +155,7 @@ class ServiceRepository {
           query = query.order('avg_rating', ascending: false);
       }
 
-      // Apply pagination
+      // Page through the filtered results.
       query = query.range(page * pageSize, (page + 1) * pageSize - 1);
 
       final data = await query;
@@ -243,7 +232,7 @@ class ServiceRepository {
     bool isDraft = false,
   }) async {
     try {
-      // Create service record first to get the ID for image paths
+      // Create the service record first so we have an ID for image paths.
       final insertData = {
         'provider_id': providerId,
         'title': title,
@@ -261,7 +250,7 @@ class ServiceRepository {
 
       final serviceId = response['id'] as String;
 
-      // Upload images if provided
+      // Upload images after the service exists so each file can use its ID.
       if (imageFiles.isNotEmpty) {
         final uploadedUrls = await _storage.uploadServiceImages(
           userId: providerId,
@@ -269,7 +258,7 @@ class ServiceRepository {
           imageFiles: imageFiles,
         );
 
-        // Update service with uploaded image URLs
+        // Save the uploaded URLs back into the service record.
         await _supabase.from('services').update({
           'image_urls': uploadedUrls,
         }).eq('id', serviceId);
@@ -299,7 +288,7 @@ class ServiceRepository {
     bool? isDraft,
   }) async {
     try {
-      // Upload new image files and merge with kept existing URLs
+      // Merge existing URLs with newly uploaded files.
       List<String>? finalImageUrls = imageUrls;
       if (imageFiles != null && imageFiles.isNotEmpty) {
         final uploadedUrls = await _storage.uploadServiceImages(
@@ -329,8 +318,8 @@ class ServiceRepository {
     }
   }
 
-  /// Soft-deletes a service by setting is_active = false
-  /// Hard delete is not allowed — preserves booking history
+  /// Soft-deletes a service by setting is_active = false.
+  /// Hard delete is not allowed because bookings and reviews must stay linked.
   Future<void> deactivateService(String serviceId) async {
     try {
       await _supabase
@@ -347,6 +336,7 @@ class ServiceRepository {
   /// Generates and caches a new one if stale or missing.
   Future<String?> getOrRefreshAiSummary(ServiceModel service) async {
     try {
+      // Do not spend an AI call unless the service has enough reviews.
       if (service.reviewCount < 3) {
         debugPrint(
           'AI summary: skip service=${service.id} (reviewCount=${service.reviewCount} < 3)',
@@ -354,6 +344,7 @@ class ServiceRepository {
         return null;
       }
 
+      // Reuse a recent summary so we do not regenerate it too often.
       if (service.aiSummary != null && service.aiSummaryAt != null) {
         final age = DateTime.now().difference(service.aiSummaryAt!);
         if (age.inHours < 24) {
@@ -367,6 +358,7 @@ class ServiceRepository {
         );
       }
 
+      // Pull only the latest review comments needed for the summary.
       final reviewsData = await _supabase
           .from('reviews')
           .select('rating, comment')
@@ -386,6 +378,7 @@ class ServiceRepository {
         return null;
       }
 
+      // Turn review rows into plain text the AI can summarize.
       final reviewTexts = reviews
           .where((r) =>
               r['comment'] != null &&
@@ -414,7 +407,7 @@ class ServiceRepository {
         return null;
       }
 
-      // Matches ServiceModel / DB column ai_summary_at (not ai_summary_generated_at)
+      // Persist the summary and its refresh time back to the service row.
       await _supabase.from('services').update({
         'ai_summary': summary,
         'ai_summary_at': DateTime.now().toIso8601String(),
@@ -456,7 +449,7 @@ class ServiceRepository {
     required String serviceId,
   }) async {
     try {
-      // Check if already saved
+      // See whether the service is already saved before toggling.
       final existing = await _supabase
           .from('saved_services')
           .select()
@@ -465,7 +458,7 @@ class ServiceRepository {
           .maybeSingle();
 
       if (existing != null) {
-        // Remove from saved
+        // Remove the saved row if it already exists.
         await _supabase
             .from('saved_services')
             .delete()
@@ -473,7 +466,7 @@ class ServiceRepository {
             .eq('service_id', serviceId);
         return false;
       } else {
-        // Add to saved
+        // Otherwise create a new saved row.
         await _supabase.from('saved_services').insert({
           'customer_id': customerId,
           'service_id': serviceId,
@@ -513,4 +506,3 @@ class ServiceRepository {
     }
   }
 }
-

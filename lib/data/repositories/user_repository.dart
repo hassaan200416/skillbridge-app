@@ -1,24 +1,23 @@
-// user_repository.dart
+// User repository contract and placeholder Supabase implementation.
+// This file defines the user profile data operations used by the app and the
+// admin tools. The current class is still a stub, so the methods describe the
+// intended data flow but do not yet implement the database calls.
 //
-// Purpose: Data-layer contract and Supabase implementation for user profiles.
-// Responsibilities:
-//   - Fetch and update user profile records in the `profiles` table.
-//   - Support admin operations: list users, toggle active state.
-//   - Map exceptions to [Failure] sealed types.
-//   - NEVER be called directly from widgets — use via providers.
-// Dependencies:
-//   - services/supabase_service.dart
-//   - data/models/user_model.dart
-//   - core/errors/failures.dart
+// Once completed, this layer should handle profile reads and updates, user
+// listing, provider filtering, and toggling active state without widgets
+// talking to Supabase directly.
 
 import '../../core/errors/failures.dart';
 import '../../data/models/user_model.dart';
 
 abstract class UserRepository {
+  /// Loads one user profile by ID.
   Future<(UserModel?, Failure?)> getUserById(String id);
 
+  /// Saves updates to one user profile.
   Future<(UserModel?, Failure?)> updateProfile(UserModel user);
 
+  /// Loads users for admin lists and search screens.
   Future<(List<UserModel>, Failure?)> getAllUsers({
     String? role,
     bool? isActive,
@@ -26,8 +25,10 @@ abstract class UserRepository {
     int offset = 0,
   });
 
+  /// Enables or disables a user account.
   Future<Failure?> setUserActiveState(String id, {required bool isActive});
 
+  /// Loads providers, optionally narrowed by city.
   Future<(List<UserModel>, Failure?)> getProviders({String? city});
 }
 

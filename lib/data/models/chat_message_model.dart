@@ -1,8 +1,9 @@
-// chat_message_model.dart
-// Immutable model representing a single SkillBot chat message.
-// Used by skillbot_provider.dart and rendered by skillbot_widget.dart.
+// Chat message data used by the SkillBot assistant.
+// Each object stores one message bubble from either the user or the bot.
+// The model is immutable so the chat history can be updated safely in Riverpod.
 
 class ChatMessageModel {
+  // One chat bubble in the conversation timeline.
   const ChatMessageModel({
     required this.id,
     required this.content,
@@ -12,9 +13,11 @@ class ChatMessageModel {
 
   final String id;
   final String content;
-  final bool isUser; // true = user bubble, false = bot bubble
+  // True for user messages, false for assistant replies.
+  final bool isUser;
   final DateTime timestamp;
 
+  // Creates a copy with selected fields replaced.
   ChatMessageModel copyWith({
     String? id,
     String? content,
@@ -41,6 +44,7 @@ class ChatMessageModel {
 
   @override
   String toString() {
+    // Short preview for debug logs and diagnostics.
     final end = content.length < 40 ? content.length : 40;
     return 'ChatMessageModel(id: $id, isUser: $isUser, content: ${content.substring(0, end)}...)';
   }

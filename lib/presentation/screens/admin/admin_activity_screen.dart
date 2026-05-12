@@ -1,13 +1,9 @@
-// ---------------------------------------------------------------------------
-// admin_activity_screen.dart
+// Admin analytics dashboard.
+// This screen shows platform-wide numbers in a way that is easy to scan:
+// total users, services, bookings, revenue, and the main distribution charts.
 //
-// Purpose: Admin analytics dashboard with real charts. User breakdown
-//   pie chart, booking status distribution, category bar chart,
-//   monthly booking trend line chart. All from existing providers.
-//
-// Route: /admin/activity  (inside AdminShell)
-//
-// ---------------------------------------------------------------------------
+// Each chart is built from existing providers so the admin view stays in sync
+// with the same data that powers the rest of the app.
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +66,7 @@ class AdminActivityScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             LayoutBuilder(builder: (context, c) {
               final narrow = c.maxWidth < 600;
+              // Four quick KPI cards summarize the platform at a glance.
               final cards = [
                 _MetricCard(
                   icon: Icons.people_outline,
@@ -270,6 +267,7 @@ class _UserPieChartState extends State<_UserPieChart> {
             child: Text('Error loading',
                 style: GoogleFonts.inter(color: _kMuted))),
         data: (users) {
+          // Split the user list into role buckets for the pie chart.
           final customers =
               users.where((u) => u.role == UserRole.customer).length;
           final providers =
@@ -519,6 +517,7 @@ class _CategoryBarChart extends StatelessWidget {
             child: Text('Error loading',
                 style: GoogleFonts.inter(color: _kMuted))),
         data: (services) {
+          // Count how many services fall into each category label.
           final counts = <String, int>{};
           for (final service in services) {
             final label = service.category.value.replaceAll('_', ' ');
@@ -654,6 +653,7 @@ class _MonthlyTrendChart extends StatelessWidget {
                     style: GoogleFonts.inter(color: _kMuted)));
           }
 
+          // Group bookings by creation month so the trend chart can show growth.
           final monthly = <String, int>{};
           for (final booking in bookings) {
             final key = DateFormat('yyyy-MM').format(booking.createdAt);
@@ -900,7 +900,8 @@ class _MetricCard extends StatelessWidget {
             loading: () => const SizedBox(
               height: 28,
               width: 28,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
+              child:
+                  CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
             ),
             error: (_, __) => Text('—',
                 style: GoogleFonts.poppins(

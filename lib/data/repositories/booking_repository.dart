@@ -1,20 +1,10 @@
-
-// ---------------------------------------------------------------------------
-// booking_repository.dart
+// Booking repository for all booking lifecycle operations.
+// This is the main data access layer for booking creation, booking history,
+// provider actions, admin views, and slot availability checks.
 //
-// Purpose: All booking lifecycle operations for SkillBridge.
-//
-// Responsibilities:
-//   - Create bookings with availability checks
-//   - Customer: view history, cancel pending bookings
-//   - Provider: view incoming, accept/reject/complete
-//   - Admin: view all bookings, flag disputes
-//   - Real-time subscription to booking status changes
-//
-// Note: price_at_booking is snapshotted at creation time.
-// Note: provider_id is denormalized for RLS performance.
-//
-// ---------------------------------------------------------------------------
+// It also handles details users should not think about directly, such as
+// snapshotting the booking price at creation time and shaping Supabase join
+// results into app-friendly models.
 
 import 'package:supabase_flutter/supabase_flutter.dart' hide StorageException;
 import '../../core/errors/failures.dart';
@@ -28,7 +18,9 @@ class BookingRepository {
 
   final _supabase = SupabaseService.instance;
 
-  // Supabase join query — reused across multiple methods
+  // Shared join query used by most booking lookups.
+  // It pulls the booking plus linked service, customer, and provider data in
+  // one query so the UI can render names and avatars without extra calls.
   static const String _bookingJoinQuery = '''
     *,
     services!service_id(title, image_urls),
@@ -54,32 +46,37 @@ class BookingRepository {
     String? note,
   }) async {
     try {
-      // Validate booking date is not in the past
-      if (bookingDate.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+      // Basic date guard so users cannot book a service for yesterday or older.
+      if (bookingDate
+          .isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
         throw const ValidationFailure(
           'Booking date cannot be in the past.',
           field: 'booking_date',
         );
       }
 
-      // Customer cannot book their own service
+      // A customer cannot book their own service listing.
       if (customerId == providerId) {
         throw const PermissionFailure(
           'You cannot book your own service.',
         );
       }
 
-      final data = await _supabase.from('bookings').insert({
-        'service_id': serviceId,
-        'customer_id': customerId,
-        'provider_id': providerId,
-        'booking_date': bookingDate.toIso8601String().split('T').first,
-        'time_slot': timeSlot.value,
-        'note': note,
-        'status': 'pending',
-        // Snapshot price at booking time — immutable after this
-        'price_at_booking': servicePrice,
-      }).select(_bookingJoinQuery).single();
+      final data = await _supabase
+          .from('bookings')
+          .insert({
+            'service_id': serviceId,
+            'customer_id': customerId,
+            'provider_id': providerId,
+            'booking_date': bookingDate.toIso8601String().split('T').first,
+            'time_slot': timeSlot.value,
+            'note': note,
+            'status': 'pending',
+            // Keep the price seen at booking time, even if the service changes later.
+            'price_at_booking': servicePrice,
+          })
+          .select(_bookingJoinQuery)
+          .single();
 
       return BookingModel.fromJson(Map<String, dynamic>.from(data));
     } on ValidationFailure {
@@ -95,7 +92,7 @@ class BookingRepository {
 
   // ── Customer Queries ──────────────────────────────────────────────────────
 
-  /// Gets all bookings for a customer, optionally filtered by status
+  /// Gets all bookings for a customer, optionally filtered by status.
   Future<List<BookingModel>> getCustomerBookings({
     required String customerId,
     BookingStatus? statusFilter,
@@ -103,7 +100,8 @@ class BookingRepository {
     int pageSize = 20,
   }) async {
     try {
-      var query = _supabase.from('bookings')
+      var query = _supabase
+          .from('bookings')
           .select(_bookingJoinQuery)
           .eq('customer_id', customerId);
 
@@ -122,10 +120,11 @@ class BookingRepository {
     }
   }
 
-  /// Gets a single booking by ID
+  /// Gets one booking by ID with the linked service and user data.
   Future<BookingModel> getBookingById(String bookingId) async {
     try {
-      final data = await _supabase.from('bookings')
+      final data = await _supabase
+          .from('bookings')
           .select(_bookingJoinQuery)
           .eq('id', bookingId)
           .single();
@@ -140,11 +139,12 @@ class BookingRepository {
     }
   }
 
-  /// Customer cancels a pending booking
+  /// Lets a customer cancel a pending booking.
   Future<BookingModel> cancelBooking(String bookingId) async {
     try {
-      // RLS policy already enforces status = pending check
-      final data = await _supabase.from('bookings')
+      // The database policy still blocks invalid cancellations.
+      final data = await _supabase
+          .from('bookings')
           .update({'status': 'cancelled'})
           .eq('id', bookingId)
           .select(_bookingJoinQuery)
@@ -164,7 +164,7 @@ class BookingRepository {
 
   // ── Provider Operations ───────────────────────────────────────────────────
 
-  /// Gets all bookings for a provider, optionally filtered by status
+  /// Gets all bookings for a provider, optionally filtered by status.
   Future<List<BookingModel>> getProviderBookings({
     required String providerId,
     BookingStatus? statusFilter,
@@ -172,8 +172,9 @@ class BookingRepository {
     int pageSize = 20,
   }) async {
     try {
-      // Filters must come before .order/.range (PostgrestTransformBuilder has no .eq).
-      var query = _supabase.from('bookings')
+      // Build all filters before ordering and paging.
+      var query = _supabase
+          .from('bookings')
           .select(_bookingJoinQuery)
           .eq('provider_id', providerId);
 
@@ -185,18 +186,19 @@ class BookingRepository {
           .order('created_at', ascending: false)
           .range(page * pageSize, (page + 1) * pageSize - 1);
       return (data as List<dynamic>)
-          .map((json) => BookingModel.fromJson(
-              Map<String, dynamic>.from(json as Map)))
+          .map((json) =>
+              BookingModel.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
     } catch (e) {
       throw ServerFailure('Failed to fetch provider bookings: $e');
     }
   }
 
-  /// Provider accepts a booking
+  /// Lets a provider confirm a booking request.
   Future<BookingModel> acceptBooking(String bookingId) async {
     try {
-      final data = await _supabase.from('bookings')
+      final data = await _supabase
+          .from('bookings')
           .update({'status': 'confirmed'})
           .eq('id', bookingId)
           .select(_bookingJoinQuery)
@@ -209,8 +211,8 @@ class BookingRepository {
 
   /// Returns available start times for a service on a given date.
   ///
-  /// This maps SkillBridge's current coarse booking slots (morning/afternoon/evening)
-  /// into displayable time slots for the new selector UI.
+  /// This maps SkillBridge's coarse booking slots (morning, afternoon, evening)
+  /// into displayable time slots for the booking selector.
   Future<List<TimeSlotModel>> getAvailableSlots(
     String serviceId,
     DateTime date,
@@ -250,13 +252,14 @@ class BookingRepository {
     }
   }
 
-  /// Provider rejects a booking with optional reason
+  /// Lets a provider reject a booking and optionally store a reason.
   Future<BookingModel> rejectBooking(
     String bookingId, {
     String? reason,
   }) async {
     try {
-      final data = await _supabase.from('bookings')
+      final data = await _supabase
+          .from('bookings')
           .update({
             'status': 'cancelled',
             'rejection_reason': reason,
@@ -273,7 +276,8 @@ class BookingRepository {
   /// Provider marks a booking as completed
   Future<BookingModel> completeBooking(String bookingId) async {
     try {
-      final data = await _supabase.from('bookings')
+      final data = await _supabase
+          .from('bookings')
           .update({'status': 'completed'})
           .eq('id', bookingId)
           .select(_bookingJoinQuery)
@@ -313,7 +317,8 @@ class BookingRepository {
   /// Admin: flag a booking as disputed
   Future<BookingModel> flagAsDisputed(String bookingId) async {
     try {
-      final data = await _supabase.from('bookings')
+      final data = await _supabase
+          .from('bookings')
           .update({'status': 'disputed'})
           .eq('id', bookingId)
           .select(_bookingJoinQuery)

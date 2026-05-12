@@ -1,23 +1,10 @@
-
-// verify_email_screen.dart
+// Email verification screen shown after registration.
+// It tells the user to check their inbox, lets them resend the verification
+// email with a cooldown, and automatically moves them forward once Supabase
+// reports that the email has been confirmed.
 //
-// Purpose: Instructs the user to check their email and verify their account.
-// Responsibilities:
-//   - Display confirmation that a verification email was sent.
-//   - Provide a "Resend email" action with cooldown to prevent spam.
-//   - Poll or listen to auth state and navigate to [profileSetup] once verified.
-//   - All display strings sourced from [AppStrings].
-// Dependencies:
-//   - presentation/providers/auth_provider.dart
-//   - core/constants/app_strings.dart, app_colors.dart
-
-// ---------------------------------------------------------------------------
-// verify_email_screen.dart
-//
-// Purpose: Shown after registration. User must verify email before proceeding.
-// Polls auth state and auto-navigates when email is verified.
-//
-// ---------------------------------------------------------------------------
+// This screen is intentionally simple so users understand the next step: open
+// their email, tap the link, and then continue to profile setup.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -53,7 +40,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 
   void _startPolling() {
-    // Check email verification status every 3 seconds
+    // Check email verification status every 3 seconds.
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       try {
         await SupabaseService.instance.auth.refreshSession();
@@ -71,12 +58,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!mounted) return;
     if (profile != null) {
       ref.read(currentUserProvider.notifier).state = profile;
-      // New user — go to profile setup
+      // Once verified, send the user to profile setup.
       context.go(RouteNames.profileSetup);
     }
   }
 
   Future<void> _resendEmail() async {
+    // Prevent repeated taps while the resend request is running or cooling down.
     if (_resendCooldown > 0) return;
     setState(() => _isResending = true);
     try {
@@ -182,9 +170,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 label: _resendCooldown > 0
                     ? 'Resend in ${_resendCooldown}s'
                     : AppStrings.resendEmail,
-                onPressed: (_resendCooldown > 0 || _isResending)
-                    ? null
-                    : _resendEmail,
+                onPressed:
+                    (_resendCooldown > 0 || _isResending) ? null : _resendEmail,
                 isLoading: _isResending,
                 variant: AppButtonVariant.outlined,
               ),
@@ -195,8 +182,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   if (context.mounted) context.go(RouteNames.login);
                 },
                 child: Text('Use a different account',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.grey500)),
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.grey500)),
               ),
             ],
           ),
@@ -205,4 +192,3 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     );
   }
 }
-

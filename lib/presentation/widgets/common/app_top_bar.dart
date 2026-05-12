@@ -1,13 +1,6 @@
-// ---------------------------------------------------------------------------
-// app_top_bar.dart
-//
-// Purpose: Shared top bar widget for all 3 roles. Provides:
-//   - Hamburger to toggle sidebar
-//   - Role-aware search bar (customer: functional, provider: decorative)
-//   - Notification bell with red dot badge + popover (3-4 latest, View All)
-//   - Profile avatar with dropdown (email, Profile, Sign Out)
-//
-// ---------------------------------------------------------------------------
+// Shared top bar used by customer, provider, and admin layouts.
+// It handles the sidebar toggle, role-aware search, notifications, and the
+// profile dropdown so those controls behave the same across screens.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +14,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import 'app_sidebar.dart';
 
-// ── Design tokens ───────────────────────────────────────────────────────
+// Design tokens for the shared header.
+// Kept here so the top bar stays visually consistent without depending on a
+// larger theme object.
 const _kPrimary = Color(0xFF2D9B6F);
 const _kSecondary = Color(0xFF1A2B3C);
 const _kBorder = Color(0xFFE2E8F0);
@@ -49,7 +44,7 @@ class AppTopBar extends ConsumerWidget {
         final narrow = c.maxWidth < 520;
         return Row(
           children: [
-            // ── Hamburger (toggles sidebar) ──
+            // Sidebar toggle button.
             InkWell(
               onTap: () =>
                   ref.read(sidebarExpandedProvider.notifier).state = !expanded,
@@ -64,7 +59,7 @@ class AppTopBar extends ConsumerWidget {
             const SizedBox(width: 10),
 
             if (!narrow)
-              // ── Search bar (role-aware) ──
+              // Search bar changes behavior based on the logged-in role.
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -110,13 +105,13 @@ class AppTopBar extends ConsumerWidget {
                 const Spacer(),
             ],
 
-            // ── Notification bell ──
+            // Notification bell with unread badge and popover.
             if (user != null)
               _NotificationBell(userId: user.id, role: user.role),
 
             const SizedBox(width: 6),
 
-            // ── Profile avatar dropdown ──
+            // Profile menu with account actions.
             if (user != null) _ProfileDropdown(user: user),
           ],
         );
@@ -125,7 +120,9 @@ class AppTopBar extends ConsumerWidget {
   }
 }
 
-// ── Customer header search bar (real TextField) ─────────────────────────
+// Customer search field.
+// On customer screens, this behaves like a real search box that routes to the
+// search page and keeps the query visible.
 class _CustomerHeaderSearch extends StatefulWidget {
   @override
   State<_CustomerHeaderSearch> createState() => _CustomerHeaderSearchState();
@@ -144,10 +141,9 @@ class _CustomerHeaderSearchState extends State<_CustomerHeaderSearch> {
 
   void _submit(String query) {
     final trimmed = query.trim();
-    // Don't clear — keep the query visible in the search bar
+    // Keep the query visible after submit so the user can refine it.
     FocusScope.of(context).unfocus();
-    // Delay navigation to next microtask to avoid GlobalKey
-    // conflict during widget tree rebuild
+    // Delay navigation until after the current frame to avoid route conflicts.
     Future.microtask(() {
       if (!mounted) return;
       if (trimmed.isEmpty) {
@@ -210,7 +206,8 @@ class _CustomerHeaderSearchState extends State<_CustomerHeaderSearch> {
   }
 }
 
-// ── Provider header search bar (real TextField) ─────────────────────────
+// Provider search field.
+// Providers can search their own services, so this routes to the service list.
 class _ProviderHeaderSearch extends StatefulWidget {
   @override
   State<_ProviderHeaderSearch> createState() => _ProviderHeaderSearchState();

@@ -1,10 +1,9 @@
-// ---------------------------------------------------------------------------
-// chat_detail_screen.dart
+// Full chat conversation screen.
+// This page loads the message history, keeps it in sync with the database in
+// real time, marks messages as read, and lets the user send or delete a chat.
 //
-// Purpose: Chat conversation view with message bubbles and input.
-// Standalone screen with own Scaffold + AppSidebar + AppTopBar.
-//
-// ---------------------------------------------------------------------------
+// It is a standalone screen with its own scaffold chrome, so it can be opened
+// from customer, provider, or admin routes without depending on another shell.
 
 import 'dart:async';
 
@@ -48,6 +47,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Load the current message list once and then attach a live stream.
     _loadMessages();
     _subscribeToRealtime();
   }
@@ -60,6 +60,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       setState(() => _messages = msgs);
       _scrollToBottom();
 
+      // Mark incoming messages as read once the conversation is open.
       final user = ref.read(currentUserProvider);
       if (user != null) {
         await ChatRepository.instance.markMessagesAsRead(
@@ -71,6 +72,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   void _subscribeToRealtime() {
+    // Keep the message list current when the database changes.
     _subscription = ChatRepository.instance
         .watchMessages(widget.conversationId)
         .listen((data) {
@@ -83,6 +85,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       });
       _scrollToBottom();
 
+      // Mark new messages as read after the live refresh lands.
       final user = ref.read(currentUserProvider);
       if (user != null) {
         ChatRepository.instance.markMessagesAsRead(
@@ -94,6 +97,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   void _scrollToBottom() {
+    // Scroll after the frame so the newest message stays visible.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -111,10 +115,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
+    // Lock the composer while the message is being sent.
     setState(() => _sending = true);
     _msgController.clear();
 
     try {
+      // Save the message and then refresh the provider-backed chat list.
       await ChatRepository.instance.sendMessage(
         conversationId: widget.conversationId,
         senderId: user.id,
@@ -140,6 +146,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
 
+    // Wider screens use the sidebar shell; small screens stay focused on chat.
     final screenWidth = MediaQuery.sizeOf(context).width;
     final showSidebar = screenWidth >= 800;
 
@@ -160,6 +167,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   builder: (context, ref, _) {
                     final convoAsync = ref.watch(
                         conversationDetailProvider(widget.conversationId));
+                    // Resolve the other participant name and avatar from the thread.
                     final otherName = convoAsync.whenOrNull(
                           data: (c) => c?.otherPartyName(user.id),
                         ) ??
@@ -187,6 +195,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         children: [
                           InkWell(
                             onTap: () {
+                              // Return to the chat list for the current role.
                               final chatRoute = user.role == UserRole.customer
                                   ? '/chats'
                                   : '/p/chats';
@@ -231,6 +240,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                           ),
                           IconButton(
                             onPressed: () {
+                              // Deleting a conversation is a destructive action,
+                              // so it gets a confirm dialog first.
                               showDialog(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
@@ -250,6 +261,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                                     ),
                                     TextButton(
                                       onPressed: () async {
+                                        // Delete the conversation, then return to the list.
                                         Navigator.pop(ctx);
                                         try {
                                           await ChatRepository.instance

@@ -1,20 +1,11 @@
-
-// ---------------------------------------------------------------------------
-// notification_repository.dart
+// Notification repository for the in-app alert system.
+// This repository reads notification feeds, counts unread items, marks them
+// as read, deletes them, and exposes the database streams used by the bell
+// badge and notification list.
 //
-// Purpose: In-app notification management for SkillBridge.
-//
-// Responsibilities:
-//   - Fetch user notifications with pagination
-//   - Mark notifications as read (single or all)
-//   - Real-time subscription for new notifications
-//   - Create notifications (admin/system only via RLS)
-//
-// Note: Flutter app cannot directly insert notifications for other users
-// due to RLS. Notifications are created by database triggers or admin.
-// The notification_service.dart handles this at the service layer.
-//
-// ---------------------------------------------------------------------------
+// Notification creation is intentionally restricted. In most cases the app
+// relies on the service layer or database triggers so users only see their own
+// notifications and RLS stays in control.
 
 import '../../core/errors/failures.dart';
 import '../../services/supabase_service.dart';
@@ -28,7 +19,7 @@ class NotificationRepository {
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
-  /// Gets notifications for a user, newest first
+  /// Gets notifications for a user, newest first.
   Future<List<NotificationModel>> getUserNotifications(
     String userId, {
     int page = 0,
@@ -51,7 +42,7 @@ class NotificationRepository {
     }
   }
 
-  /// Gets count of unread notifications for a user
+  /// Counts unread notifications for a user.
   Future<int> getUnreadCount(String userId) async {
     try {
       final data = await _supabase
@@ -69,7 +60,7 @@ class NotificationRepository {
 
   // ── Mark as Read ──────────────────────────────────────────────────────────
 
-  /// Marks a single notification as read
+  /// Marks a single notification as read.
   Future<void> markAsRead(String notificationId) async {
     try {
       await _supabase
@@ -80,7 +71,7 @@ class NotificationRepository {
     }
   }
 
-  /// Marks all notifications for a user as read
+  /// Marks all notifications for a user as read.
   Future<void> markAllAsRead(String userId) async {
     try {
       await _supabase
@@ -94,7 +85,7 @@ class NotificationRepository {
   }
   // ── Delete ────────────────────────────────────────────────────────────────
 
-  /// Deletes a single notification
+  /// Deletes a single notification.
   Future<void> deleteNotification(String notificationId) async {
     try {
       await _supabase.from('notifications').delete().eq('id', notificationId);
@@ -103,7 +94,7 @@ class NotificationRepository {
     }
   }
 
-  /// Deletes all notifications for a user
+  /// Deletes all notifications for a user.
   Future<void> deleteAllNotifications(String userId) async {
     try {
       await _supabase.from('notifications').delete().eq('user_id', userId);
@@ -137,7 +128,7 @@ class NotificationRepository {
     }
   }
 
-  /// Creates booking-related notifications for both parties.
+  /// Creates booking-related notifications for the relevant party.
   ///
   /// Called by the service layer after booking status changes.
   /// Admin users can do this — for regular users this goes via
@@ -163,7 +154,7 @@ class NotificationRepository {
 
   // ── Real-time ─────────────────────────────────────────────────────────────
 
-  /// Real-time stream of unread notifications for a user.
+  /// Real-time stream of notifications for one user.
   /// UI subscribes to this to show the notification bell badge.
   Stream<List<Map<String, dynamic>>> watchUnreadNotifications(
     String userId,
@@ -222,7 +213,7 @@ class NotificationRepository {
     throw ServerFailure('Failed to create announcement: $lastError');
   }
 
-  /// Fetches active announcements not dismissed by this user
+  /// Fetches active announcements that the user has not dismissed.
   Future<List<Map<String, dynamic>>> getActiveAnnouncements(
       String userId) async {
     try {
@@ -250,9 +241,8 @@ class NotificationRepository {
             .order('created_at', ascending: false);
       }
 
-      final all = data
-          .map((json) => Map<String, dynamic>.from(json as Map))
-          .toList();
+      final all =
+          data.map((json) => Map<String, dynamic>.from(json as Map)).toList();
 
       // Filter out dismissed ones
       return all.where((a) => !dismissedIds.contains(a['id'])).toList();

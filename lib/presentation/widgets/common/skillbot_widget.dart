@@ -1,3 +1,6 @@
+// Customer SkillBot launcher and chat panel.
+// Shows a floating button on top of any screen and opens the help chat.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,10 +1,6 @@
-
-// ---------------------------------------------------------------------------
-// notification_provider.dart
-//
-// Purpose: Riverpod state for in-app notification feed and unread count.
-//
-// ---------------------------------------------------------------------------
+// Notification feed state for the app.
+// This file keeps the notification list, unread badge count, and announcement
+// feed in sync with the backend so the UI can refresh automatically.
 
 import 'dart:async';
 
@@ -16,16 +12,18 @@ import '../../data/models/notification_model.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../services/supabase_service.dart';
 
-// ── Read Providers ────────────────────────────────────────────────────────
+// Read-only providers.
+// Screens use these providers to show the current notification data.
 
-/// Realtime notifications stream — updates instantly when new
-/// notifications arrive without needing manual refresh
+/// Live notification feed for one user.
+/// The stream refreshes whenever the backend inserts a new notification.
 final userNotificationsProvider =
     StreamProvider.family<List<NotificationModel>, String>((ref, userId) {
   final supabase = SupabaseService.instance.client;
 
   final streamController = StreamController<List<NotificationModel>>();
 
+  // Reload the current list from the database.
   Future<void> fetchNotifications() async {
     try {
       final data = await supabase
@@ -60,6 +58,7 @@ final userNotificationsProvider =
           value: userId,
         ),
         callback: (payload) {
+          // Any insert triggers a fresh read so the UI always sees the latest list.
           fetchNotifications();
         },
       )
@@ -75,18 +74,19 @@ final userNotificationsProvider =
   return streamController.stream;
 });
 
-/// Unread notification count — for bell badge
+/// Unread notification count used by the bell badge.
 final unreadCountProvider = FutureProvider.family<int, String>((ref, userId) {
   return NotificationRepository.instance.getUnreadCount(userId);
 });
 
-/// Real-time notification stream — rebuilds bell badge on new notifications
+/// Stream used by the notification badge and compact notification widgets.
 final notificationStreamProvider =
     StreamProvider.family<List<Map<String, dynamic>>, String>((ref, userId) {
   return NotificationRepository.instance.watchUnreadNotifications(userId);
 });
 
-// ── Actions ───────────────────────────────────────────────────────────────
+// Mutating actions.
+// These methods mark notifications read or delete them, then refresh the UI.
 
 class NotificationActionNotifier extends StateNotifier<bool> {
   NotificationActionNotifier(this._ref) : super(false);
@@ -144,7 +144,8 @@ final notificationActionProvider =
   return NotificationActionNotifier(ref);
 });
 
-// ── Announcements ─────────────────────────────────────────────────────────
+// Announcement feed.
+// Used for active platform messages that are not tied to a booking.
 
 /// Active announcements for a user (excluding dismissed)
 final announcementsProvider =
